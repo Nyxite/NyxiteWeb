@@ -70,7 +70,7 @@ Acyclic parent chain enforced client-side.
 interface FileRow {
   id: string; projectId: string; folderId?: string; ownerId: string;
   nameEnc: Uint8Array; name?: string;                          // decrypted cache ([17])
-  contentType: 'markdown' | 'plaintext' | 'ink' | 'sourcecode' | 'office' | 'image'; // immutable
+  contentType: 'markdown' | 'plaintext' | 'ink' | 'sourcecode' | 'office' | 'image' | 'binary'; // immutable
   syncPolicy: 'server-default' | 'excluded';                  // server enum only ([08 §8.2])
   keepInBrowser?: 'keep' | 'dontKeep' | 'inherit';            // CLIENT-LOCAL pinning, never sent ([16 §16.2])
   currentVersionSeq?: number;                                  // head pointer
