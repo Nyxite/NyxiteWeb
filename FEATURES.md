@@ -33,17 +33,17 @@ Next.js + shadcn/ui client. Primary surface for anonymous guest access.
 ## Encryption & keys
 
 - Browser-side AES-256-GCM content encryption; HPKE wrapping/unwrapping of file keys
-- Device/identity key handling in the browser, including the user-held recovery key flow
+- Device/identity key handling in the browser, including recovery via the user's recovery phrase unwrapping the client-encrypted recovery blob (AES-256-GCM under an Argon2id-derived key)
 
 ## Authentication
 
-- Keycloak login with TOTP (authenticates the account; decryption is governed by the in-browser key material)
+- **Native login** — password + required TOTP, or **passkeys (WebAuthn)** — authenticates the account and returns the server's own token; decryption is governed by the in-browser key material. Enterprise Keycloak/OIDC SSO is a pluggable option. (See [SPECIFICATION §10](../docs/SPECIFICATION.md).)
 
 ## Open questions
 
 See [../docs/OPEN-DECISIONS.md](../docs/OPEN-DECISIONS.md). Web-specific:
 
-- In-browser key storage and recovery — where the identity private key lives (IndexedDB / non-extractable WebCrypto keys), session vs persistent, and the recovery-key UX in a browser
+- In-browser key storage and recovery — where the identity private key lives (IndexedDB / non-extractable WebCrypto keys), session vs persistent, and the recovery-phrase UX in a browser
 - WebCrypto coverage and performance for AES-256-GCM + HPKE (X25519) at editing scale
 - Guest session model: how anonymous link sessions are issued, scoped, and expired, with the fragment key never reaching the server
 - In-browser ink editing (pointer events / canvas) and parity with native clients

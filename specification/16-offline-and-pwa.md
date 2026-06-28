@@ -26,7 +26,7 @@ Installability requires HTTPS (secure context), a registered service worker, and
 | Static assets / chunks not in precache | `StaleWhileRevalidate` | App-shell assets only |
 | **GET ciphertext blob by content address** | **`CacheFirst`** | Content-addressed (BLAKE3) blobs are **immutable**, so address = cache key; safe to cache forever, evict by capacity ([06](06-cryptography.md)) |
 | Authed API JSON (structure, manifests, shares) | **Not cached by the SW** | Authed + per-account; cached in IndexedDB via TanStack Query/repositories instead ([05](05-api-client.md), [01](01-architecture.md)) |
-| OIDC/relay endpoints | Never intercepted | Auth/realtime must hit the network |
+| Auth/relay endpoints (native auth, relay, and enterprise OIDC) | Never intercepted | Auth/realtime must hit the network |
 
 The SW caches **only** static assets and immutable ciphertext blobs (by address). It does not see access tokens, the fragment key, or any plaintext, and has no path to the crypto worker or key vault ([17](17-security.md)). Decryption of cached ciphertext happens in the page/worker, never in the SW.
 

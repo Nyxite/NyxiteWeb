@@ -4,8 +4,8 @@
 
 ## 5.1 Conventions
 
-- **Base path:** `https://{host}/api/v1`, where `{host}` is resolved from the **per-account instance config** (`config.json` / per-account host, [01 §1.8](01-architecture.md), [14](14-authentication.md)); default `nyxite.app`. The OIDC authority, API base, relay hub, and public-share base are all runtime-resolved.
-- **Auth:** `Authorization: Bearer <OIDC access token>` on `/api/v1/**` except public share endpoints. Guests use a short-lived **share-session token** ([14](14-authentication.md)). Lifetimes match the server: access ~5 min; guest share-session 15 min (renewable); relay socket ticket single-use, 60 s.
+- **Base path:** `https://{host}/api/v1`, where `{host}` is resolved from the **per-account instance config** (`config.json` / per-account host, [01 §1.8](01-architecture.md), [14](14-authentication.md)); default `nyxite.app`. The API base, relay hub, public-share base, and (for the enterprise Keycloak option) the OIDC authority are all runtime-resolved.
+- **Auth:** `Authorization: Bearer <the server's access token>` on `/api/v1/**` except public share endpoints. Guests use a short-lived **share-session token** ([14](14-authentication.md)). Lifetimes match the server: access ~5 min; guest share-session 15 min (renewable); relay socket ticket single-use, 60 s.
 - **Content type:** `application/json` for structure/metadata; raw binary (`Uint8Array` / `ReadableStream`) for ciphertext blobs (`GET/PUT .../blob`, snapshots, version blobs).
 - **IDs:** UUIDv7, client-allocated where the API requires (`crdtDocId`, file `id` at create, share/key surrogate ids) via `@/lib/uuidv7`. **Timestamps:** RFC 3339 UTC strings.
 - **Pagination:** `?cursor=<opaque>&limit=<n>` (default 50, max 200); response `{ items, nextCursor }`. The cursor is an **opaque base64url** server token — stored verbatim (`syncCursor.cursor`) and **never parsed** ([04 §4.3](04-local-data-model.md)).

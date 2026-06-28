@@ -19,7 +19,7 @@ Browser-enrollment keypair (per browser) ──► used to receive the identity 
 
 ## 7.2 First sign-in (brand-new account)
 
-1. User authenticates with Keycloak (OIDC + PKCE + TOTP) → access token ([14](14-authentication.md)).
+1. User authenticates with native auth (password+TOTP or a passkey; or the enterprise Keycloak OIDC + PKCE option) → the server's access token ([14](14-authentication.md)).
 2. App checks the directory (`GET /keys/directory?userId=me`). If the user has **no identity keypair**, generate **X25519 + Ed25519** (libsodium, in the worker), then **publish the public keys** via `PUT /keys` (signed directory entry, [06 §6.10](06-cryptography.md)).
 3. Create the **vault key** and store the wrapped identity bundle ([§7.3](#73-keyvault-design-p)).
 4. Generate the **recovery key** and escrow ([§7.6](#76-recovery-flow)). The user is **forced through the recovery-key flow before setup completes**.

@@ -11,7 +11,7 @@ Every web-specific open item is now **ratified** (this revision). Each entry bel
 | Text CRDT engine | **Yjs** (+ y-protocols, y-codemirror.next) — reference Yrs impl, lowest-risk of the three clients | [02 §2.7](02-tech-stack-and-libraries.md), [09 §9.12](09-realtime-collaboration.md) |
 | Ink in the browser | **View + basic Pointer-Events editing**; shared **deterministic CBOR** format | [00 §0.3](00-overview.md), [10](10-editors.md), [§19.7](#197-ink-parity-in-the-browser--decided-view-first) |
 | Multi-account | **Yes, from v1.0.0** — per-account IndexedDB/keys/cache/index; per-account instance host | [01 §1.8](01-architecture.md), [14](14-authentication.md) |
-| Library stack | shadcn/Tailwind, TanStack Query + Zustand, WebCrypto + hpke-js + libsodium + hash-wasm, CodeMirror 6, @microsoft/signalr, oidc-client-ts, MiniSearch, cbor-x | [02](02-tech-stack-and-libraries.md) |
+| Library stack | shadcn/Tailwind, TanStack Query + Zustand, WebCrypto + hpke-js + libsodium + hash-wasm, CodeMirror 6, @microsoft/signalr, fetch + WebAuthn API (native auth; oidc-client-ts for enterprise Keycloak), MiniSearch, cbor-x | [02](02-tech-stack-and-libraries.md) |
 | **Key storage & lock** ([§19.1](#191-in-browser-key-storage--lock-model--decided)) | **Non-extractable WebCrypto vault key** wraps the identity bundle; unlock via **WebAuthn passkey where available, else passphrase**; idle auto-lock; **persistent ("remember this browser") by default** (session-only is a user choice) | [07 §7.3–7.4](07-key-and-device-management.md), [17](17-security.md) |
 | **X25519 / Ed25519 library** ([§19.3](#193-x25519--ed25519-library--decided-libsodium)) | **libsodium-wrappers-sumo (WASM)** — consistent across all browsers; behind `CryptoEngine` for a future native swap | [02 §2.6](02-tech-stack-and-libraries.md), [06 §6.2](06-cryptography.md) |
 | **Argon2id params (default)** ([§19.2](#192-webcrypto--wasm-performance--decided-worker-offload)) | **m = 64 MiB, t = 3, p = 1** (matches server/Android; per-blob params in `kdf_params`) | [06 §6.8](06-cryptography.md), [07 §7.6](07-key-and-device-management.md) |
@@ -129,7 +129,7 @@ These track the **server's canonical ledger**; the client must match each exactl
 
 ## 19.10 Static-export routing & runtime config — *DECIDED (client catch-all + SPA fallback)*
 
-**Decision.** Serve runtime routes via a **client-rendered optional catch-all** (`/share/[[...token]]`) resolved fully in the browser; configure the host to **fall back to the SPA shell** for unknown paths (200-rewrite to `index.html`). Resolve API base / OIDC authority / relay hub / share base at boot from a **`config.json`** (per-account override), **not** baked into the build ([00 §0.5](00-overview.md), [18 §18.2](18-build-ci-testing.md)).
+**Decision.** Serve runtime routes via a **client-rendered optional catch-all** (`/share/[[...token]]`) resolved fully in the browser; configure the host to **fall back to the SPA shell** for unknown paths (200-rewrite to `index.html`). Resolve API base / relay hub / share base (and the OIDC authority for the enterprise Keycloak option) at boot from a **`config.json`** (per-account override), **not** baked into the build ([00 §0.5](00-overview.md), [18 §18.2](18-build-ci-testing.md)).
 
 **Validate.** Deploy-time test that deep-linking `/share/...` and an arbitrary client route load the shell on the static host/CDN; verify `config.json` is `no-cache` and editing it re-points the app without a rebuild.
 

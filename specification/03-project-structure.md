@@ -19,8 +19,8 @@ NyxiteWeb/
 │   ├── layout.tsx                     # root shell: providers (Query, theme, account session), <html>
 │   ├── page.tsx                       # redirect → /app or /login
 │   ├── globals.css                    # Tailwind layer + brand CSS variables
-│   ├── login/page.tsx                 # Keycloak OIDC entry ([14])
-│   ├── auth/callback/page.tsx         # OIDC redirect handler (PKCE)
+│   ├── login/page.tsx                 # native login (password+TOTP + passkey) ([14])
+│   ├── auth/callback/page.tsx         # enterprise Keycloak OIDC redirect handler (PKCE) ([14])
 │   ├── app/                           # authenticated area (account session required)
 │   │   ├── layout.tsx                 # nav chrome, account switcher, sync badges
 │   │   ├── page.tsx                   # project list / browse root
@@ -49,7 +49,7 @@ NyxiteWeb/
 │   │   ├── crdt/                      # CrdtEngine: Yjs apply/encode/state-vector/snapshot ([09])
 │   │   ├── keyvault/                  # KeyVault: non-extractable CryptoKey handles in IDB ([07])
 │   │   ├── blobcache/                 # BlobCache: Cache Storage + IDB metadata ([16])
-│   │   ├── auth/                      # AuthManager: oidc-client-ts, token + share-token store ([14])
+│   │   ├── auth/                      # AuthManager: native fetch/WebAuthn (+ oidc-client-ts for enterprise), token + share-token store ([14])
 │   │   └── mappers/                   # DTO ↔ entity ↔ Dexie row mappers (DTOs never escape data/)
 │   │
 │   ├── features/                      # feature slices: components + hooks + Zustand store, each self-contained
@@ -75,7 +75,7 @@ NyxiteWeb/
 │   └── sw.ts                          # precache + runtime routing; NEVER decrypts, holds no keys ([17])
 │
 └── public/
-    ├── config.json                    # runtime instance config (API base, OIDC authority, relay, share base)
+    ├── config.json                    # runtime instance config (API base, relay, share base; OIDC authority for enterprise Keycloak)
     ├── manifest.webmanifest           # PWA identity (§3.4)
     ├── icons/                         # from Nyxite/icons set; install/maskable icons
     └── *.wasm                         # blake3, argon2id, libsodium WASM artifacts
@@ -102,7 +102,7 @@ NyxiteWeb/
 | `src/data/crdt` (`CrdtEngine`) | Yjs updates, state vectors, snapshots | Data → `lib` |
 | `src/data/keyvault` (`KeyVault`) | Identity-key handles, FK handle map, unlock gating | Data → `lib` |
 | `src/data/blobcache` (`BlobCache`) | Cached ciphertext/decrypted blobs, eviction | Data → `lib` |
-| `src/data/auth` (`AuthManager`) | OIDC tokens, silent refresh, relay ticket, guest share-token | Data → `lib` |
+| `src/data/auth` (`AuthManager`) | Server access/refresh tokens, silent refresh, relay ticket, guest share-token | Data → `lib` |
 | `src/data/mappers` | DTO ↔ entity ↔ Dexie row conversion | Data → `domain`, `api`, `local` |
 | `src/lib/*` | Config, Result, time, base64url, uuidv7, scrubbing logger | Leaf → nothing |
 | `src/workers/*` | Off-main-thread crypto + diff | Worker context (no DOM) |

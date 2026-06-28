@@ -8,8 +8,8 @@ Every segment is a client component; there is no SSR of content and no server ru
 
 | Group | Segment | Screen |
 |-------|---------|--------|
-| **Auth** | `app/login/page.tsx` | Keycloak OIDC + PKCE start ([14](14-authentication.md)) |
-| | `app/auth/callback/page.tsx` | OIDC redirect handler (code → tokens, in memory) |
+| **Auth** | `app/login/page.tsx` | Native login — password+TOTP + passkey (WebAuthn) ([14](14-authentication.md)) |
+| | `app/auth/callback/page.tsx` | Enterprise Keycloak OIDC redirect handler (code → tokens, in memory) |
 | | `app/enroll/page.tsx` | Browser (device) enrollment ([07](07-key-and-device-management.md)) |
 | | `app/enroll/approve/page.tsx` | Approve another browser/device from this one |
 | | `app/recovery/setup/page.tsx` | Recovery-key creation (BIP39, hard warnings) |
@@ -40,7 +40,7 @@ Every segment is a client component; there is no SSR of content and no server ru
 - **Other dynamic segments** (`[projectId]`, `[folderId]`, `[fileId]`, versions, share-manage) are exported with a catch-all fallback page; the hosting layer is configured to serve the SPA shell for unknown paths (`trailingSlash`, a `404.html`/rewrite to the shell) so a deep-linked or reloaded route boots the app and the router re-resolves the segment from `LocalStore`/API.
 - **Fallback shell** — while the bundle, crypto worker, account session, and data load, each route renders a skeleton (shadcn `Skeleton`) keyed to its layout; no blank document is ever shown.
 
-**Deep links:** share URLs are `https://{host}/share/{token}#k=…` (host resolved per account/instance, [00 §0.5](00-overview.md)); the OIDC redirect is `https://{host}/auth/callback`. Both are pure static paths needing no server.
+**Deep links:** share URLs are `https://{host}/share/{token}#k=…` (host resolved per account/instance, [00 §0.5](00-overview.md)); the enterprise Keycloak OIDC redirect is `https://{host}/auth/callback`. Both are pure static paths needing no server.
 
 ## 15.3 Responsive layout
 

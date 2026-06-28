@@ -23,7 +23,7 @@ The server-side model is [server 13](https://github.com/Nyxite/server) (zero-kno
 
 XSS is the **top** web threat: any script running in the page runs with full access to the unlocked session. Layered defenses:
 
-- **Strict Content-Security-Policy** (delivered via meta + host headers): `default-src 'self'`; **`script-src 'self'`** (no `'unsafe-inline'`, no `'unsafe-eval'`); `connect-src` limited to the **configured instance** API/relay/OIDC origins only; `frame-ancestors 'none'`; `object-src 'none'`; `base-uri 'self'`; `style-src 'self'` (+ nonces if needed); `img-src 'self' data:` (no remote fetch from notes).
+- **Strict Content-Security-Policy** (delivered via meta + host headers): `default-src 'self'`; **`script-src 'self'`** (no `'unsafe-inline'`, no `'unsafe-eval'`); `connect-src` limited to the **configured instance** API/relay origins (plus the OIDC authority under the enterprise Keycloak option) only; `frame-ancestors 'none'`; `object-src 'none'`; `base-uri 'self'`; `style-src 'self'` (+ nonces if needed); `img-src 'self' data:` (no remote fetch from notes).
 - **Trusted Types [P]** (`require-trusted-types-for 'script'`) to choke DOM-XSS sinks; the only sink allowed is the markdown sanitizer's output policy.
 - **Sanitize all rendered markdown** via **rehype-sanitize** with a strict schema ([02 §2.2](02-tech-stack-and-libraries.md), [10 §10.2](10-editors.md)); **no remote content fetch** from notes (no remote images/scripts/iframes).
 - **Ban `dangerouslySetInnerHTML`** outside the single audited sanitizer wrapper (lint rule).
@@ -52,7 +52,7 @@ The share-link file key arrives in `location.hash` ([13](13-sharing.md), [server
 ## 17.6 Token handling
 
 - **Access token in memory only** (a module-scoped variable inside the session), never `localStorage`/`sessionStorage` ([14](14-authentication.md)).
-- **Cautious refresh** via oidc-client-ts (silent refresh / refresh token per the instance's Keycloak config); the relay socket ticket and guest share-session token are short-lived ([server 13 §13.4](https://github.com/Nyxite/server)).
+- **Cautious refresh** of the server's access token (native refresh-token grant, or oidc-client-ts silent refresh under the enterprise Keycloak option); the relay socket ticket and guest share-session token are short-lived ([server 13 §13.4](https://github.com/Nyxite/server)).
 - **Never** place tokens, keys, or fragments in `localStorage`/`sessionStorage`/URL/telemetry. **Logout** clears the in-memory session and tears down the `UserSession`.
 
 ## 17.7 Service worker

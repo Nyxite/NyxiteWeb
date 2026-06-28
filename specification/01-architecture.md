@@ -27,7 +27,8 @@ It follows a **layered (Clean-ish) architecture** with **unidirectional data flo
 │   • CrdtEngine (Yjs)                  ← text merge                │
 │   • KeyVault (non-extractable CryptoKey in IndexedDB) ← key mat.   │
 │   • BlobCache (Cache Storage / IDB)   ← cached ciphertext/plain    │
-│   • AuthManager (oidc-client-ts)      ← OIDC tokens, share tokens  │
+│   • AuthManager (native fetch/WebAuthn;                            │
+│       oidc-client-ts for enterprise) ← server tokens, share tokens │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -75,7 +76,7 @@ Repository interfaces (`FileRepository`, `StructureRepository`, `KeyRepository`,
 | `CrdtEngine` | Apply/encode Yjs updates, state vectors, snapshots | **Yjs** ([09](09-realtime-collaboration.md)) |
 | `KeyVault` | Hold/seal the identity-key handles; gate unlock | **non-extractable WebCrypto `CryptoKey` in IndexedDB** ([07](07-key-and-device-management.md)) |
 | `BlobCache` | Store/evict cached ciphertext and decrypted blobs (ink/binary) | **Cache Storage** + IndexedDB ([16](16-offline-and-pwa.md)) |
-| `AuthManager` | OIDC tokens, silent refresh, relay socket ticket, guest share-token | **oidc-client-ts** ([14](14-authentication.md)) |
+| `AuthManager` | Server access/refresh tokens, silent refresh, relay socket ticket, guest share-token | **native `fetch` + WebAuthn API** (default); **oidc-client-ts** for the enterprise Keycloak option ([14](14-authentication.md)) |
 
 ## 1.6 Workers & threading
 
@@ -98,6 +99,6 @@ Browsers are single-threaded on the main thread; CPU-bound crypto/CRDT/diff must
 
 The app is **multi-account from v1.0.0** ([14 §14.7](14-authentication.md)). Per-account state must not leak across accounts:
 
-- An **account-scoped session** (`UserSession`) owns the unlocked identity-key handles, OIDC tokens, repositories, and account-scoped data sources: the account's **IndexedDB database** (named per `accountId`), its `BlobCache` partition, and its search index. It is created after login + key-unlock and **cleared on lock/logout/switch** (key handles dropped, in-memory plaintext discarded).
+- An **account-scoped session** (`UserSession`) owns the unlocked identity-key handles, the server's tokens, repositories, and account-scoped data sources: the account's **IndexedDB database** (named per `accountId`), its `BlobCache` partition, and its search index. It is created after login + key-unlock and **cleared on lock/logout/switch** (key handles dropped, in-memory plaintext discarded).
 - No use case can touch decrypted key material before unlock; no account can read another's store. The active account is swapped by tearing down the prior session and rooting the UI at the new account's data.
-- Because the bundle is instance-agnostic ([00 §0.5](00-overview.md)), each account also carries its **instance host** (API/OIDC/relay/share bases), enabling a personal and a shared instance side by side.
+- Because the bundle is instance-agnostic ([00 §0.5](00-overview.md)), each account also carries its **instance host** (API/relay/share bases, plus the OIDC authority for the enterprise Keycloak option), enabling a personal and a shared instance side by side.

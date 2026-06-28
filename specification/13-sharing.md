@@ -45,7 +45,7 @@ The full URL (with fragment) **cannot be reconstructed** by the server or app af
 
 ## 13.3 Guest mode (primary surface)
 
-A visitor opens a link in any browser with **no Keycloak account and no server key exchange**. The flow:
+A visitor opens a link in any browser with **no account (no native login or Keycloak) and no server key exchange**. The flow:
 
 1. **Shell loads.** The static-export shell serves the `/share/{token}` route as a fully client-rendered optional catch-all ([15 §15.1](15-ui-and-navigation.md)); it boots a **trimmed guest client** (editor only, no full nav).
 2. **Capture then strip the fragment.** On first paint, read `location.hash` into **memory only**, then immediately `history.replaceState(null, '', location.pathname)` to **remove the fragment from the visible URL**, address bar, and subsequent history entries — reducing shoulder-surfing, history-sync, and referrer leakage ([17](17-security.md)). The in-memory FK survives the rewrite; it is never persisted ([01 §1.7](01-architecture.md)).

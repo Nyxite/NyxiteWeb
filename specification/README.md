@@ -54,7 +54,7 @@ All web-specific open questions are now **ratified** — see [19-open-questions.
 | 11 | [search.md](11-search.md) | In-browser FTS over the local subset; indexing lifecycle |
 | 12 | [version-history.md](12-version-history.md) | Snapshot fetch, client-side diff, restore |
 | 13 | [sharing.md](13-sharing.md) | Account shares (HPKE), link shares (URL fragment), guest mode, revocation |
-| 14 | [authentication.md](14-authentication.md) | Keycloak OIDC + PKCE + TOTP, token storage, refresh |
+| 14 | [authentication.md](14-authentication.md) | Native auth (password+TOTP, passkeys) default; enterprise Keycloak OIDC + PKCE; token storage, refresh |
 | 15 | [ui-and-navigation.md](15-ui-and-navigation.md) | Routes, screens, shadcn/Tailwind, responsive, accessibility |
 | 16 | [offline-and-pwa.md](16-offline-and-pwa.md) | PWA install, service worker, IndexedDB-cached subset, keep-in-browser, storage limits |
 | 17 | [security.md](17-security.md) | Browser threat model, at-rest in IndexedDB, CSP/XSS, fragment handling |

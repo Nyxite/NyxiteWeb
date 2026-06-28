@@ -19,7 +19,7 @@ Live multi-user editing of text documents over an **encrypted relay**: the serve
 
 - **SignalR over WebSocket**, a single hub `RelayHub`, with per-document SignalR **groups keyed `file:{fileId}`**. The official `@microsoft/signalr` JS client is used with the **binary (MessagePack) protocol** so `EncryptedUpdate` ciphertext travels as bytes, not base64.
 - **Upgrade auth** (one of):
-  - **OIDC bearer** for signed-in users ([14](14-authentication.md));
+  - **the server's access token (bearer)** for signed-in users ([14](14-authentication.md));
   - a **single-use socket ticket** (60 s lifetime) minted by the API and exchanged on connect (avoids putting the bearer on the WS URL);
   - a **guest share-session token** (15 min, renewable) for link-share guests.
 - The token authorizes **relay access only**; the **decryption key never comes from the server** — it is the user's unwrapped FK, or the guest's **fragment key from the URL** (`#k=…`, [13](13-sharing.md)).
@@ -48,7 +48,7 @@ LeaveDocument(fileId: string): Promise<void>;
 type EncryptedUpdate = { seq: number; ciphertext: Uint8Array; keyId: string };
 ```
 
-`PresenceDto` carries identity only (Keycloak display name or `"guest"`), never content.
+`PresenceDto` carries identity only (the account display name or `"guest"`), never content.
 
 ## 9.5 Join handshake
 

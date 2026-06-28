@@ -42,7 +42,7 @@ These are the direct, accepted consequences of privacy-first; the spec degrades 
 
 v1.0.0 is the **complete E2EE web client** spanning Phases 0–6 of the master roadmap, built in the same phase order as the server (see [20-roadmap.md](20-roadmap.md)). The key/identity/recovery subsystem is foundational (Phase 0) and is never retrofitted later.
 
-Explicitly **in scope**: markdown + plaintext + ink editing/viewing, the server sync policies (`server-default`/`excluded`) plus client-local keep-in-browser, encrypted relay collaboration with guests, account + link sharing, rotation-based revocation, version history with client diffs/restore, in-browser search over the local subset, Keycloak login with TOTP, identity-key handling and the user-held recovery-key flow in the browser, installable PWA with offline support, and **multiple accounts / instance switching** ([14 §14.7](14-authentication.md)).
+Explicitly **in scope**: markdown + plaintext + ink editing/viewing, the server sync policies (`server-default`/`excluded`) plus client-local keep-in-browser, encrypted relay collaboration with guests, account + link sharing, rotation-based revocation, version history with client diffs/restore, in-browser search over the local subset, native login (password+TOTP or passkeys; enterprise Keycloak/OIDC pluggable), identity-key handling and the user-held recovery-key flow in the browser, installable PWA with offline support, and **multiple accounts / instance switching** ([14 §14.7](14-authentication.md)).
 
 Explicitly **out of scope for v1.0.0** (deferred, matching server Phase 5–6 and the separate migration item): office-document and source-code content types, image attachments, chunked upload for very large binaries, key-transparency/safety-number verification, metadata-graph hiding, handwriting recognition, and Samsung Notes `.sdoc` import. Seams are left where they touch the architecture.
 
@@ -50,7 +50,7 @@ Explicitly **out of scope for v1.0.0** (deferred, matching server Phase 5–6 an
 
 - **Static-export SPA.** The app is built with Next.js (App Router) and exported to **static assets** (`output: 'export'`) served from a CDN/static host. There is **no Next.js server runtime, no SSR of content, no server components touching data** — the strongest zero-knowledge posture and the simplest thing to self-host alongside the API ([01](01-architecture.md), [18](18-build-ci-testing.md)).
 - **Everything is client-side.** Routing, data fetching, crypto, CRDT merge, search and rendering run in the browser. Dynamic routes that depend on runtime values (e.g. `/share/{token}`) are served by a single statically-exported shell rendered fully client-side ([15 §15.1](15-ui-and-navigation.md)).
-- **Instance configuration.** The static bundle is instance-agnostic; the API base (`/api/v1`), OIDC authority, relay hub URL, and public-share base are resolved at runtime from a small `config.json` / environment (per-account override for multi-instance) ([14](14-authentication.md), [19](19-open-questions.md)).
+- **Instance configuration.** The static bundle is instance-agnostic; the API base (`/api/v1`), relay hub URL, public-share base, and (for the enterprise Keycloak option) the OIDC authority are resolved at runtime from a small `config.json` / environment (per-account override for multi-instance) ([14](14-authentication.md), [19](19-open-questions.md)).
 
 ## 0.6 Target browsers & platform baseline
 
@@ -69,11 +69,11 @@ Browsers without the required APIs (e.g. WebCrypto absent, third-party-storage p
 
 | Actor | On Web |
 |-------|--------|
-| **User** | Signs in via Keycloak (OIDC + PKCE + TOTP) in the browser, establishes/holds the identity keypair, owns/edits/shares files. |
-| **Guest** | This browser acting on a link share: **no Keycloak account**, file key taken from the URL fragment, relay access via a short-lived share-session token. The app both *opens* incoming links and *creates* link shares. The web client is the primary guest surface. |
+| **User** | Signs in with **native auth** (password+TOTP or a passkey) directly against the Nyxite server — or, in an enterprise deployment, via Keycloak (OIDC + PKCE + TOTP) — establishes/holds the identity keypair, owns/edits/shares files. |
+| **Guest** | This browser acting on a link share: **no account**, file key taken from the URL fragment, relay access via a short-lived share-session token. The app both *opens* incoming links and *creates* link shares. The web client is the primary guest surface. |
 | **Peer** | Another user/guest editing the same document; seen through presence/awareness over the relay. |
 | **Server** | Blind relay/store. The client treats every byte it sends as ciphertext the server cannot read. |
-| **Keycloak** | External IdP for account auth and TOTP. |
+| **Keycloak** | Optional **enterprise** external IdP for account auth and TOTP; the default is Nyxite-native, server-owned auth. |
 
 ## 0.8 Glossary (client-facing)
 
@@ -94,7 +94,7 @@ Browsers without the required APIs (e.g. WebCrypto absent, third-party-storage p
 
 | Phase | Web deliverable |
 |-------|-----------------|
-| 0 | App shell (static-export SPA + PWA install), Keycloak login + TOTP, browser enrollment, identity keys in IndexedDB (non-extractable), recovery-key UX, structure browsing with encrypted names, local encrypted store. |
+| 0 | App shell (static-export SPA + PWA install), native login (password+TOTP or passkey; enterprise Keycloak/OIDC pluggable), browser enrollment, identity keys in IndexedDB (non-extractable), recovery-key UX, structure browsing with encrypted names, local encrypted store. |
 | 1 | Markdown + plaintext editing on the encrypted Yjs document (single user, offline-capable), blob sync, server sync policies (server-default/excluded) + client-local keep-in-browser, on-demand download, view/edit modes, in-browser search over the local subset. |
 | 2 | Live relay collaboration (client-side merge), account + link sharing, **guest mode (primary surface)**, rotation-based revocation, version history with client diffs + restore. |
 | 3 | Pointer-events ink capture + the shared vector stroke format, LWW/version-vector ink sync (encrypted blobs); ink viewing first, basic editing. |

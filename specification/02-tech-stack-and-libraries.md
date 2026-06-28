@@ -50,7 +50,7 @@ Concrete choices with rationale. Versions are **[P]** floors at time of writing;
 |---------|--------|-----------|
 | HTTP | **`fetch`** wrapped in a typed `ApiClient` (interceptors for auth, retry, idempotency) | No heavy HTTP dep; `/api/v1` over ciphertext ([05](05-api-client.md)). |
 | Realtime | **`@microsoft/signalr`** (JS client) | The server relay is SignalR `RelayHub` ([09](09-realtime-collaboration.md)); official browser client, binary protocol for `EncryptedUpdate`. |
-| OIDC/auth | **oidc-client-ts** | Authorization Code + **PKCE** with Keycloak, silent refresh ([14](14-authentication.md)). |
+| Auth | **fetch + WebAuthn API** (default); **oidc-client-ts** (enterprise) | **Default native auth**: `fetch` posts password + TOTP to the Nyxite server API, and the browser **WebAuthn API** handles passkeys. **oidc-client-ts** is only for the **enterprise Keycloak option** (Authorization Code + **PKCE**, silent refresh) ([14](14-authentication.md)). |
 
 ## 2.6 Cryptography (must match the server's algorithm table exactly)
 
