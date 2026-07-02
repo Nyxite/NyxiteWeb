@@ -130,7 +130,7 @@ NyxiteWeb/
 
 ## 3.4 Naming conventions
 
-- Engines/clients are an **interface + impl**: `CryptoEngine` (interface) / `CryptoEngineImpl` or `WebCryptoEngine`; `RelayClient` / `SignalRRelayClient`; backing-tech prefixes (`Dexie*`, `Yjs*`, `Hpke*`) signal the library, mirroring the Android `Tink*`/`Ykt*` convention.
+- Engines/clients are an **interface + impl**: `CryptoEngine` (interface) / `CryptoEngineImpl` or `WebCryptoEngine`; `RelayClient` / `SignalRRelayClient`; backing-tech prefixes (`Dexie*`, `Yjs*`, `Hpke*`) signal the library, mirroring the Android `Tink*`/`Yrs*` convention.
 - Use cases are verb-first classes/functions (`OpenFileForEdit`, `RunDeltaSync`) with a callable `invoke`.
 - DTOs (network) carry the `Dto` suffix and **never escape `data/`** — mapped to entities in `data/mappers`.
 - Dexie row interfaces carry a `Row` suffix and never leave the data layer.

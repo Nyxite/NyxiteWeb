@@ -90,7 +90,7 @@ These track the **server's canonical ledger**; the client must match each exactl
 - **PINNED** — recovery-escrow = **AES-256-GCM under the Argon2id-derived key** (not HPKE), shape + `AAD = userId ‖ version` ([06 §6.4](06-cryptography.md), [07](07-key-and-device-management.md)).
 - **PINNED** — snapshot/compaction triggers (**≥ 200 updates / 5 min / last-leave**) ([09 §9.8](09-realtime-collaboration.md)).
 - **PINNED** — token lifetimes: access ~5 min; **relay socket ticket single-use 60 s**; **guest share-session 15 min** renewable ([14 §14.5](14-authentication.md)).
-- **PINNED** — **CRDT wire protocol** (Yjs reference, pinned vs ydotnet/ykt): byte-identical merged state, encoded updates, state-vector reconstruction ([09 §9.12](09-realtime-collaboration.md)).
+- **PINNED** — **CRDT wire protocol** (Yjs reference, pinned vs ydotnet/android yrs/UniFFI): byte-identical merged state, encoded updates, state-vector reconstruction ([09 §9.12](09-realtime-collaboration.md)).
 - *Track & confirm* — the only item still genuinely loose server-side: exact `POST /sync/changes` / `GET /sync/manifest` payload shapes and `ref` formats ([08](08-sync-engine.md)). The client codes defensively against the server spec and locks them once the server pins them.
 
 **Action**: one tracking item per bullet against the server spec; the failing-by-default test for each turns green when the server pins the value.

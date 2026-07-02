@@ -71,7 +71,7 @@ All primitives must match the server's ledger ([server 07 §7.3](https://github.
 
 | Concern | Choice | Risk |
 |---------|--------|------|
-| Text CRDT | **Yjs** (+ **y-protocols** for awareness, **y-codemirror.next** for the editor binding) | **Lowest-risk binding of the three clients** — Yjs is the reference, most battle-tested Yrs-family implementation. The wire protocol is pinned via the shared conformance vectors against ydotnet (desktop) and ykt (Android) ([09 §9.12](09-realtime-collaboration.md), [18](18-build-ci-testing.md)). Updates are **encrypted before they leave** ([06](06-cryptography.md)). |
+| Text CRDT | **Yjs** (+ **y-protocols** for awareness, **y-codemirror.next** for the editor binding) | **Lowest-risk binding of the three clients** — Yjs is the reference, most battle-tested Yrs-family implementation. The wire protocol is pinned via the shared conformance vectors against ydotnet (desktop) and yrs/UniFFI (Android) ([09 §9.12](09-realtime-collaboration.md), [18](18-build-ci-testing.md)). Updates are **encrypted before they leave** ([06](06-cryptography.md)). |
 
 ## 2.8 Ink / stylus (browser-constrained)
 

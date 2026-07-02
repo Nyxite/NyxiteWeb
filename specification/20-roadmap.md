@@ -4,7 +4,7 @@ Phase order mirrors the server ([server 15](https://github.com/Nyxite/server)) a
 
 Before Phase 1 logic is committed, run the **early spikes** ([18 §18.8](18-build-ci-testing.md)): crypto/WASM perf, hpke-js suite-id check, in-browser key-storage/lock, SignalR-in-browser, multi-tab coordination, storage persistence.
 
-Every phase is gated by the **cross-client conformance vectors** ([18 §18.6](18-build-ci-testing.md)) — crypto KATs/interop and the Yjs↔ydotnet↔ykt CRDT wire vectors must stay green; any drift from the server ledger fails CI.
+Every phase is gated by the **cross-client conformance vectors** ([18 §18.6](18-build-ci-testing.md)) — crypto KATs/interop and the Yjs↔ydotnet↔yrs/UniFFI (Android) CRDT wire vectors must stay green; any drift from the server ledger fails CI.
 
 ## Phase 0 — Foundations
 **Deliver**: app shell + client-side navigation as a **static-export SPA** + **PWA install** (Workbox SW, manifest, `navigator.storage.persist()`) ([00 §0.5](00-overview.md), [16](16-offline-and-pwa.md)); **account-scoped session + per-account IndexedDB/keys/cache** as the multi-account foundation ([01 §1.8](01-architecture.md), [04](04-local-data-model.md), [14](14-authentication.md)); native login (password+TOTP or passkey; enterprise Keycloak OIDC + PKCE pluggable) ([14](14-authentication.md)); **browser enrollment**, identity keypair (X25519 + Ed25519) generation, and the **recovery-key UX** (BIP39-24 → Argon2id → AES-256-GCM escrow) ([07](07-key-and-device-management.md)); key directory publish/lookup; the **non-extractable WebCrypto vault key wrapping the identity bundle** in IndexedDB ([07](07-key-and-device-management.md), [19 §19.1](19-open-questions.md)); structure CRUD with **encrypted names** decrypted in-browser ([05](05-api-client.md)); crypto engine in the Web Worker with conformance vectors ([06](06-cryptography.md), [18 §18.6](18-build-ci-testing.md)); runtime `config.json` instance resolution ([19 §19.10](19-open-questions.md)).
@@ -29,7 +29,7 @@ Every phase is gated by the **cross-client conformance vectors** ([18 §18.6](18
 - **Revoking a share** cuts off access and **rotates the key**.
 - **History diffs and restore** run entirely in-browser.
 - Multi-tab: exactly one relay connection; edits propagate across tabs.
-- CRDT conformance with desktop (ydotnet) and Android (ykt) passes.
+- CRDT conformance with desktop (ydotnet) and Android (yrs/UniFFI) passes.
 
 ## Phase 3 — Handwriting
 **Deliver**: **Pointer-events ink capture** (`pressure`/`tiltX`/`tiltY`, `getCoalescedEvents()`, palm rejection) on `<canvas>` with low-latency rendering ([10 §10.4](10-editors.md)); the **shared deterministic-CBOR** ink vector format, byte-stable for content addressing ([10 §10.5](10-editors.md)); **LWW / version-vector** ink sync as encrypted blobs ([08 §8.5](08-sync-engine.md)); **viewing first**, then basic editing ([19 §19.7](19-open-questions.md)).

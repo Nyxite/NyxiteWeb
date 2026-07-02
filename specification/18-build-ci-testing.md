@@ -57,7 +57,7 @@ CI fails on a budget breach (`size-limit` or the bundler analyzer with threshold
 | Layer | Tools | Focus |
 |-------|-------|-------|
 | **Crypto conformance** | Vitest + shared KAT/cross-client vectors | **AES-GCM framing, HPKE wrap/unwrap, Ed25519, X25519, BLAKE3, Argon2id** interop byte-for-byte with server/desktop/Android. Wrap in browser → unwrap on server impl and vice-versa. **Highest priority** ([06 §6.9](06-cryptography.md), [§18.6](#186-conformance-vectors-the-critical-gate)). |
-| **CRDT conformance** | Vitest + shared Yrs wire vectors | Yjs is the **reference**, but still pinned vs ydotnet (desktop) and ykt (Android): identical merged state, identical encoded updates, state-vector reconstruction ([09 §9.12](09-realtime-collaboration.md)). |
+| **CRDT conformance** | Vitest + shared Yrs wire vectors | Yjs is the **reference**, but still pinned vs ydotnet (desktop) and yrs/UniFFI (Android): identical merged state, identical encoded updates, state-vector reconstruction ([09 §9.12](09-realtime-collaboration.md)). |
 | Domain | Vitest | Use cases, policy, conflict/sync state machine — **pure TS**, no DOM/IO ([01 §1.4](01-architecture.md)). |
 | Data (repos) | Vitest + **fake-indexeddb** + a fake/mocked server | Dexie schema + migrations (asserted), API mapping, problem+json error mapping, outbox/idempotency, delta/manifest reconcile ([04](04-local-data-model.md), [05](05-api-client.md), [08](08-sync-engine.md)). |
 | Crypto engine (real) | Vitest in **jsdom/Node with real WebCrypto** + WASM | Real `SubtleCrypto` (Node 20 `crypto.subtle`), real WASM (sodium/hash-wasm/hpke); KATs run against the actual libs, not mocks. |
@@ -95,7 +95,7 @@ Interop is non-negotiable in a zero-knowledge multi-client system. The build **f
 
 ### CRDT wire-protocol conformance
 
-- Yjs is the **reference** implementation but is still **pinned** against `ydotnet` and `ykt` via shared Yrs wire vectors ([02 §2.7](02-tech-stack-and-libraries.md), [09 §9.12](09-realtime-collaboration.md)):
+- Yjs is the **reference** implementation but is still **pinned** against `ydotnet` and android `yrs/UniFFI` via shared Yrs wire vectors ([02 §2.7](02-tech-stack-and-libraries.md), [09 §9.12](09-realtime-collaboration.md)):
   - **byte-identical merged state** for a fixed update sequence;
   - **byte-identical encoded updates** for the same edit sequence;
   - **state-vector reconstruction** from snapshot + log matches the other clients.

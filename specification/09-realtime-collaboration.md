@@ -1,6 +1,6 @@
 # 09 — Real-time Collaboration
 
-Live multi-user editing of text documents over an **encrypted relay**: the server stores and forwards encrypted CRDT updates but never merges or reads them; **each browser runs the Yjs engine and merges locally** ([server 05](https://github.com/Nyxite/server)). Yjs is the **reference** Yrs-family implementation, so the web binding is the lowest-risk of the three clients ([02 §2.7](02-tech-stack-and-libraries.md)) — but the wire protocol is still conformance-locked against ydotnet (desktop) and ykt (Android) ([§9.12](#912-wire-protocol-conformance-critical), [18](18-build-ci-testing.md)).
+Live multi-user editing of text documents over an **encrypted relay**: the server stores and forwards encrypted CRDT updates but never merges or reads them; **each browser runs the Yjs engine and merges locally** ([server 05](https://github.com/Nyxite/server)). Yjs is the **reference** Yrs-family implementation, so the web binding is the lowest-risk of the three clients ([02 §2.7](02-tech-stack-and-libraries.md)) — but the wire protocol is still conformance-locked against ydotnet (desktop) and yrs/UniFFI (Android) ([§9.12](#912-wire-protocol-conformance-critical), [18](18-build-ci-testing.md)).
 
 ## 9.1 Model
 
@@ -107,4 +107,4 @@ Any participating client may snapshot. The **server prune watermark** (`PruneAft
 
 ## 9.12 Wire-protocol conformance (critical)
 
-Text edited on web (Yjs) must merge identically on desktop (ydotnet) and Android (ykt). The client ships a **`CrdtConformance` suite** that replays the shared Yrs wire-protocol vectors and asserts identical merged state and identical encoded updates across bindings ([18 §18.5](18-build-ci-testing.md)). Because the relay model keeps no CRDT engine in the live server path, binding-maturity risk lives entirely in the clients; Yjs is the **reference**, so the web vectors are authoritative for the protocol the other clients are checked against.
+Text edited on web (Yjs) must merge identically on desktop (ydotnet) and Android (yrs/UniFFI). The client ships a **`CrdtConformance` suite** that replays the shared Yrs wire-protocol vectors and asserts identical merged state and identical encoded updates across bindings ([18 §18.5](18-build-ci-testing.md)). Because the relay model keeps no CRDT engine in the live server path, binding-maturity risk lives entirely in the clients; Yjs is the **reference**, so the web vectors are authoritative for the protocol the other clients are checked against.
