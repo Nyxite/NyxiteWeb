@@ -153,3 +153,42 @@ These track the **server's canonical ledger**; the client must match each exactl
 | 19.10 | Static-export routing | Client catch-all + SPA fallback + config.json | Deploy-time routing test | Web | Phase 0 |
 
 Every web-side fork is now **decided**; the only thing still owned elsewhere is the server's exact `/sync` payload shapes (19.6), which the client tracks and conformance-locks.
+
+---
+
+## 19.12 Group sharing (enterprise/family) — *web validation spikes*
+
+Group sharing ([features/groups.md](https://github.com/Nyxite/Nyxite), [06 §6.14](06-cryptography.md), [07 §7.11](07-key-and-device-management.md), [13 §13.9](13-sharing.md)) reuses **already-decided** web machinery — the same HPKE suite, worker offload, libsodium/hpke-js stack, and `412`/`409` rotation flow — so it introduces **no new crypto fork** and **no new primitive** (a group public key is just another HPKE target). Build step **P4.4-WEB-1**, after key transparency (Phase 4.3). The remaining items are **web-specific validation spikes**, folded into the master [`docs/OPEN-DECISIONS.md`](https://github.com/Nyxite/Nyxite) group section.
+
+### 19.12.1 In-browser group-key storage
+
+**Decision.** Group private keys are **never persisted unwrapped**: the *wrapped* group-key grant may cache in IndexedDB ([04 §4.2](04-local-data-model.md)) exactly like a wrapped FK, and the unwrapped group private key lives **in the crypto worker only**, short-lived, dropped on lock/logout/account-switch ([06 §6.14](06-cryptography.md), [07 §7.11.3](07-key-and-device-management.md), [07 §7.9](07-key-and-device-management.md)). Unlike an FK, a group private key is **raw bytes for libsodium/HPKE unwrap** (not a non-extractable `CryptoKey`), so it takes the identity-bundle mitigations: `.fill(0)` on drop, never in `String`/`localStorage`/URL/logs ([06 §6.12](06-cryptography.md)).
+
+**Validate.** Confirm a member of many groups/scopes keeps only bounded in-worker group-key handles (no unbounded retention), and that lock/switch zeroizes them; assert no unwrapped group key ever reaches IndexedDB, the main thread, or logs ([18 §18.5](18-build-ci-testing.md)).
+
+**Fallback.** Re-unwrap the group key per scope on demand (from the cached wrapped grant) rather than holding handles across scopes if memory pressure shows up on the weakest target.
+
+### 19.12.2 WASM HPKE performance for group unwrap/rotation
+
+**Decision.** Group wrap/unwrap runs in the **crypto worker** on the existing **hpke-js + libsodium** WASM stack (§19.2/§19.3), transferring `ArrayBuffer`s. Enrollment is **O(1)** (one grant); the heaviest op is **scope rotation** — re-wrap the group key to N remaining members + optional re-seal of the scope's DEKs — which is N small HPKE wraps, not content re-encryption ([07 §7.11.4](07-key-and-device-management.md), [13 §13.9](13-sharing.md)).
+
+**Validate.** Perf spike: group-key unwrap + DEK-to-group unwrap latency on read; rotation wall-time for a large group / large scope (many DEKs) on low/mid machines and mobile Safari; confirm the browser — the **most storage- and memory-constrained** client — stays responsive and does not OOM on a big re-seal.
+
+**Fallback.** Chunk the rotation re-wrap/re-seal cooperatively across worker turns with progress UI; for very large scopes, drive re-seal as a resumable batch queue (the §13.1/§13.9.2 pattern) rather than one synchronous pass.
+
+### 19.12.3 Group UX in a constrained client
+
+**Decision.** The browser hosts the full group-management screen ([13 §13.9.1](13-sharing.md)) — create/enroll/remove, transparency-verified enrollment with a clear "key not verified" rejection, reader-group attachment on a project/folder, and the **honest revocation UI** ("already-decrypted content can't be recalled"). Because the browser cannot hold the whole corpus, a **subtree grant / scope re-seal shows progress and survives reconnect** (resumable batch, §13.9.2), and group state renders from the local subset with re-fetch on demand.
+
+**Validate.** UX spike: enrollment transparency-failure messaging is unambiguous; reader-group cascade (`inherit`/group/none) is legible across project→folder→file; the revocation caveat is surfaced non-dismissably; batch grant/rotation progress and resume behave on flaky mobile connections.
+
+**Fallback.** Where a scope is too large to manage responsively in-browser, surface a "manage on desktop" hint (desktop is the full-corpus surface, [00 §0.3](00-overview.md)) while keeping read/enroll working in the browser.
+
+### 19.12.4 Status
+
+| # | Item | Decision | Remaining (validation only) | Owner | Gate |
+|---|------|----------|-----------------------------|-------|------|
+| 19.12.1 | Group-key storage | Wrapped grant cached; unwrapped key in-worker only, zeroized | Retention/zeroization + leakage audit | Web | Phase 4.4 |
+| 19.12.2 | WASM HPKE perf | Worker offload; O(1) enroll; rotation = N small wraps | Rotation/re-seal perf spike (constrained client) | Web | Phase 4.4 |
+| 19.12.3 | Group UX | Full mgmt screen; transparency + honest-revocation UI; resumable batches | UX + flaky-network spike | Web | Phase 4.4 |
+| — | Enrollment trust | **Requires key transparency (Phase 4.3)** — no self-signature-only enrollment | Track Phase 4.3 landing in v1.0.0 | Server → Web | Phase 4.3 |

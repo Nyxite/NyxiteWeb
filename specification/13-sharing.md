@@ -108,3 +108,44 @@ The link **is** the secret — anyone with the full URL can decrypt. Browser-spe
 ## 13.8 Audit
 
 Share creation, permission changes, revocations, and **key rotations** are audited **server-side** with target/actor — **never content or keys** ([server 09 §9.7](https://github.com/Nyxite/server)). Link **access** by guests is auditable by **token hash** (+ IP/UA), never the fragment key. The client surfaces nothing the server could not already log.
+
+## 13.9 Group sharing (enterprise / family)
+
+A **third share path** alongside account grants (§13.1) and links (§13.2): share to a **group** so a whole team/family reads a file from **one** DEK-to-group wrap instead of one wrap per member ([features/groups.md](https://github.com/Nyxite/Nyxite), [06 §6.14](06-cryptography.md), [07 §7.11](07-key-and-device-management.md)). It **coexists** with the other two — account/link shares stay for one-off single-person shares; groups serve team/family scale. Build step **P4.4-WEB-1**; enrollment depends on **key transparency (Phase 4.3)**. `GroupRepository` orchestrates the REST/ACL side; `CryptoEngine` does the group wrap/unwrap in the worker ([06 §6.14](06-cryptography.md)).
+
+Two archetypes:
+- **Family** — every member holds a different personal key but all read the same shared data (one family group key; each shared file's DEK wraps to it).
+- **Enterprise "manager reads all"** — a **managers** group reads every worker's file via a **reader-group attachment** (§13.9.3); a worker reads only their own.
+
+### 13.9.1 Group-management screen
+
+A dedicated screen (reached from the share/security area, [15 §15.1](15-ui-and-navigation.md)) lets a member with the group key:
+- **Create a group** — pick family/enterprise + scope (project / time-period); `generateGroupKeypair()` in the worker; publish the public halves ([07 §7.11.1](07-key-and-device-management.md)).
+- **Enroll a member** — look up their directory entry, **verify it against the key-transparency log before wrapping** ([07 §7.11.2](07-key-and-device-management.md)); a directory-substituted key is rejected with a clear error (stronger than the account-share self-signature check in §13.5). Enrollment writes **one** grant blob (O(1)); over the group-size limit the add is rejected (`404`/limit error) — the server counts membership rows only, reading no key or content.
+- **Remove a member** — soft-delete their grant (instant), then drive scope rotation (§13.9.4).
+- **List members** — surface each member's **key fingerprint** (BLAKE3 over their directory public keys) and grant generation; group public/rotation health is metadata-only.
+
+### 13.9.2 Wrapping a file / subtree to a group
+
+To grant a file to a group, the client HPKE-wraps that file's **FK to the group public key** ([06 §6.14](06-cryptography.md)) and `POST`s **one** DEK-to-group wrapped-key row (principal = group, per scope/generation) — no per-member fan-out. For a **folder/project** target it drains the same **resumable batch queue** as subtree account shares (§13.1), wrapping each current file-key to the group; "fully granted" holds once every current file-key in the subtree has a group-wrapped row. Adding a member later touches **no file** — the single group-key grant instantly reaches every file the group can read.
+
+### 13.9.3 Reader-group attachment (auto-wrap on create)
+
+The enterprise "manager reads all" behaviour rides the **existing per-project/folder/file cascade** ([04](04-local-data-model.md), same inheritance as sync policy): a scope may carry a **reader-group attachment** — `inherit` / a specific group / none — naming a group whose **public key new files are auto-wrapped to** on creation. The client **enforces it at file creation**: on `POST /files` it wraps the DEK to the **author's own key AND the attached group's public key** ([07 §7.7](07-key-and-device-management.md), [06 §6.14](06-cryptography.md)). A manager then reads any worker's file via the managers-group key; another worker has **no path** (cryptographically locked out). The server stores the attachment as **opaque structure metadata** and never reads it.
+
+### 13.9.4 Revocation & honest UI
+
+Group removal is the same **two-layer** model as §13.6, at the **group-key** level and **scoped to the affected project/time-period** ([07 §7.11.4](07-key-and-device-management.md)):
+
+1. **Instant ACL cutoff** — `DELETE /groups/{id}/members/{uid}`; the removed member can no longer fetch group ciphertext or blobs, at every checkpoint.
+2. **Scope-scoped rotation** — a **remaining member's** browser rotates the affected scope's group key (`generation + 1`), re-wraps to remaining members, and optionally **re-seals** that scope's file DEKs under the new group key:
+
+```ts
+await api.post(`/groups/${id}/keys/rotate`,
+  { scopeId, newGeneration, wrappedGrants, reWrappedDeks });
+```
+
+- Commits **only if** `generation == current + 1`, else **`409`** (a concurrent rotation won — refetch and re-drive). In-flight old-generation DEK-to-group wraps are accepted until commit, then rejected **`412 key_generation_stale`**; the client **re-seals** under the new group key and re-submits — the same `412` re-seal flow as FK rotation ([05 §5.4](05-api-client.md)). **Only the affected scope** is touched; other scopes stay on their generation.
+- **Honest limitation, surfaced plainly:** rotation stops the removed member reading **new** content only — **already-decrypted content can't be recalled**. The revocation UI states this exactly as for per-file revocation (§13.6), so admins are not misled that removal "erases" prior access.
+
+Recovery composes for free: recovering the identity key ([07 §7.6](07-key-and-device-management.md)) automatically restores group access (grants unwrap under the recovered personal key) — no special step ([07 §7.11.5](07-key-and-device-management.md)). Group creation, enrollment, removal, rotation, and size-limit rejections are audited server-side with **target/actor only — never a key or content** (§13.8).

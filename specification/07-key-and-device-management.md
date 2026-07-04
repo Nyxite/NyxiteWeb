@@ -105,4 +105,50 @@ The app is multi-account from v1.0.0 ([01 §1.8](01-architecture.md), [14 §14.7
 ## 7.10 Forward links
 
 - At-rest threat detail (IndexedDB exposure, XSS, the unlocked-tab window, zeroization limits) → [17-security.md](17-security.md).
-- Open validation items (passkey vs passphrase default, idle-timeout default, Argon2id final tuning in-browser, persistent-storage eviction of the vault) → [19-open-questions.md](19-open-questions.md).
+- Open validation items (passkey vs passphrase default, idle-timeout default, Argon2id final tuning in-browser, persistent-storage eviction of the vault, in-browser group-key storage and WASM HPKE perf) → [19-open-questions.md](19-open-questions.md).
+
+## 7.11 Group keys (enterprise/family groups) **[P]**
+
+Groups add a **group keypair** between a member's identity key and file DEKs ([06 §6.14](06-cryptography.md), [13 §13.9](13-sharing.md), [features/groups.md](https://github.com/Nyxite/Nyxite)). The web client handles group keygen, transparency-verified enrollment, grant unwrapping, scope-scoped rotation, and recovery — all in the worker, under build step **P4.4-WEB-1**. It **requires key transparency (Phase 4.3)**: unlike per-file account shares (which trust TLS + Ed25519 self-signature, [§7.5](#75-browser-enrollment), [13 §13.5](13-sharing.md)), one substituted key at group enrollment exposes the **whole group's corpus**, so enrollment wraps **only** to transparency-log-verified public keys.
+
+Extended hierarchy (adds one wrapped layer to [§7.1](#71-key-hierarchy-web-client-view)):
+
+```
+Identity bundle (X25519 priv ‖ Ed25519 priv), in memory
+   └─ HPKE-unwraps → Group private key (per group, per scope)   ← from a group-key grant
+                        └─ HPKE-unwraps → File Keys (FK/DEK) wrapped to the group
+```
+
+### 7.11.1 Group creation (keygen)
+
+The creator's browser calls `CryptoEngine.generateGroupKeypair()` ([06 §6.14](06-cryptography.md)) → **X25519 + Ed25519** in the worker; publishes the **public** halves (`POST /groups { group_pubkey, ed25519_pubkey, scope_kind, max_members? }`, signed), and immediately writes itself a **group-key grant** (wrap the group private key under its own identity public key). Private halves stay in the worker; the server holds public material + opaque grants only.
+
+### 7.11.2 Enrollment (transparency-verified, O(1) per member)
+
+Adding a member — from a browser that already holds the group key:
+
+1. Fetch the newcomer's directory entry (`GET /keys/directory?userId=`).
+2. **Verify the entry against the key-transparency log (Phase 4.3 inclusion proof)** — a directory-substituted key is **rejected before any wrap** (harder gate than the account-share self-signature check).
+3. HPKE-**wrap the group private key** under the verified X25519 public key (`wrapGroupKeyToMember`, [06 §6.14](06-cryptography.md)).
+4. `POST /groups/{id}/members` carrying **one** grant blob. No file is touched — the single grant instantly grants every file the group can read (**O(1)**, versus the account-share path's O(files) per member).
+
+Over the **server-enforced group-size limit** ([features/groups.md](https://github.com/Nyxite/Nyxite)) the enroll `POST` is rejected (membership-row count only; no key/content read) and audited; existence-hiding applies (no reach → `404`).
+
+### 7.11.3 Group-key grant handling (read path)
+
+On opening group content, the browser `GET`s its grant for the scope, `unwrapGroupKey`s it with the identity private key → an in-worker group-private handle, then `unwrapDekWithGroup`s each file's DEK-to-group row → `FileKeyHandle` ([06 §6.14](06-cryptography.md)). Group private handles are **short-lived in the worker** like FK handles ([§6.7](06-cryptography.md)) — dropped on lock/logout/switch ([§7.4](#74-lock-model), [§7.9](#79-multi-account-isolation)), never persisted unwrapped. The **wrapped** grant may be cached in IndexedDB ([04 §4.2](04-local-data-model.md)); the unwrapped group key is memory-only.
+
+### 7.11.4 Scope-scoped rotation on member removal (`412` re-seal)
+
+Removal is two-layer, reusing the [§7.8](#78-rotation--revocation-client-driven-forward-secrecy) FK-rotation machinery at the **group-key** level, **scoped to the affected project/time-period** (never the group's whole history):
+
+1. **Instant grant delete** — `DELETE /groups/{id}/members/{uid}` soft-deletes the removed member's grant (immediate cutoff).
+2. **Scope rotation** — a **remaining member's** browser generates a **new group keypair for the affected scope** (`generation + 1`), re-wraps the new group private key to **every remaining** member, and (Full revoke) optionally **re-seals the scope's file DEKs** to the new group public key — re-wrapping only the small DEKs, never file ciphertext.
+3. `POST /groups/{id}/keys/rotate { scopeId, newGeneration, wrappedGrants[], reWrappedDeks? }`. The server commits **only if** `generation == current + 1`, else **`409`** (a concurrent rotation won — refetch and re-drive).
+4. **In-flight old-generation DEK-to-group wraps** are accepted until commit, then rejected **`412 key_generation_stale`**; the client **re-seals** the DEK under the new group key and re-submits — identical to the FK `412` flow ([§7.7](#77-file-key-lifecycle), [13 §13.9](13-sharing.md)). Only the affected scope is touched; other scopes stay on their generation.
+
+**Honest caveat (unchanged, [13 §13.9](13-sharing.md), [13 §13.6](13-sharing.md)):** rotation only stops the removed member reading **new** content; what a keyholder already decrypted cannot be recalled. Surfaced plainly in the UI.
+
+### 7.11.5 Recovery restores group access
+
+Because each group private key is wrapped **under the member's personal public key**, recovering the identity key composes for free: after the recovery-phrase restore ([§7.6](#76-recovery-flow)) re-obtains the identity bundle, every group-key grant **unwraps under the recovered personal key** with **no special step** — group access simply returns. A member who lost **all** browsers **and** the recovery phrase must be **re-enrolled by a group admin** (one new grant to their new public key, [§7.11.2](#7112-enrollment-transparency-verified-o1-per-member)) — the only manual path.

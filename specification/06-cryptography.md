@@ -169,3 +169,52 @@ CPU-bound crypto must not block the React main thread ([01 §1.6](01-architectur
 - **Secure context required.** `crypto.subtle` is only present in secure contexts (HTTPS, or `localhost` in dev) and in worker contexts; a browser without it gets the unsupported-browser screen ([00 §0.6](00-overview.md)), never a degraded path. The crypto worker confirms `self.crypto?.subtle` and `WebAssembly` at startup.
 - **Performance.** WebCrypto AES-GCM is typically hardware-accelerated and fast for bulk content; Argon2id (64 MiB) is the only multi-second op and is why it lives in the worker. BLAKE3 via WASM streams large blobs.
 - **Why libsodium for X25519/Ed25519, not WebCrypto.** Native WebCrypto support for `X25519` and `Ed25519` is **uneven across the target browser/version matrix** (Safari and older Firefox/Chromium lag and behave inconsistently). To guarantee one **bit-identical** implementation everywhere — and to match the suites the other clients use — the web client standardizes on **libsodium-wrappers-sumo** (WASM) for both, and uses hpke-js (which itself uses X25519) for the public-key wrap. WebCrypto is used **only** for AES-GCM, where support is universal and acceleration matters.
+
+## 6.14 Group-key wrapping (enterprise/family groups) **[P]**
+
+Group sharing ([13 §13.9](13-sharing.md), [07 §7.11](07-key-and-device-management.md), [features/groups.md](https://github.com/Nyxite/Nyxite)) inserts a **middle key layer** into the envelope hierarchy so a whole group reads a file from **one** DEK-to-group wrap instead of one wrap per member. Build step **P4.4-WEB-1**; enrollment depends on key transparency ([07 §7.11](07-key-and-device-management.md), Phase 4.3).
+
+```
+personal key  →  wraps  →  group key  →  wraps  →  DEK (FK)  →  encrypts  →  file
+```
+
+- **No new primitive.** A group public key is **just another HPKE target**, exactly like a member or browser-enrollment public key — the same suite the rest of §6 pins. No new algorithm, no new WASM module: the group crypto reuses **hpke-js** (`@hpke/core` + `@hpke/dhkem-x25519`) for the wrap and **libsodium-wrappers-sumo** for the group Ed25519 keypair, both already hosted in the crypto worker ([§6.11](#611-the-crypto-worker), [§6.13](#613-browser-specific-notes-webcrypto-availability--library-choice-p)). All group wrap/unwrap runs **in the worker**, never on the main thread and never in any Next.js server runtime.
+- **Group keypair.** `X25519` (HPKE recipient) + `Ed25519` (signs the group's directory entry / grants), generated with libsodium in the worker at group creation. The **public** halves are published; the **private** halves are stored **only wrapped**, once per member.
+
+**Group-key grant blob (`group_privkey` HPKE-wrapped to a member).** The group private key is HPKE-sealed to a member's **X25519 public key** using **exactly** the §6.5 suite and `enc ‖ ct ‖ tag` framing; the grant record wraps that ciphertext with routing/agility metadata (pinned in **P4.4-CORE-1**):
+
+```
+group_id(16) | scope_id(16) | member_id(16) | generation(4) | alg_id(2) | hpke_ct( enc(32) ‖ ct ‖ tag(16) )
+```
+
+- **`alg_id`** (2 bytes) tags the wrap algorithm on **every** group blob for crypto-agility (PQC migration): the group key wraps *many* DEKs, concentrating any future post-quantum blast radius, so the format is algorithm-agile from day one even though v1 ships classical HPKE (`alg_id` = the pinned DHKEM(X25519,HKDF-SHA256)/HKDF-SHA256/AES-256-GCM suite). The client **refuses** an `alg_id` it does not implement and surfaces "update required" ([§6.3](#63-encrypted-object-framing)), never guessing.
+- **Grants are append-only:** rotation bumps `generation` and appends a new row rather than mutating, preserving an auditable "who could read what when" trail. The blob carries **no plaintext key material** — the server stores opaque bytes only.
+
+**DEK-to-group wrap.** To let a group read a file, the client HPKE-wraps that file's **FK** to the **group public key** (fetched from the directory, verified per [§6.10](#610-signing--verifying)) and stores one wrapped-key row whose **principal is a group** (per scope/generation), alongside the existing per-member wraps ([13 §13.9](13-sharing.md)). Same `enc ‖ ct ‖ tag` output; same `alg_id` tag.
+
+**Unwrap chain (read path).** A member's browser:
+1. HPKE-**unwraps the group private key** from its grant using the **identity X25519 private key** (`unwrapWithIdentity`) — the group privkey surfaces as raw bytes held **in the worker only**, `.fill(0)` on drop ([§6.12](#612-implementation-rules)).
+2. HPKE-**unwraps the file DEK** from the DEK-to-group row using that group private key → a non-extractable `FileKeyHandle` ([§6.7](#67-filekeyhandle)).
+3. `open`s content as usual (§6.3). The group privkey is never persisted unwrapped and never leaves the worker.
+
+**`CryptoEngine` additions** (worker-fronted, mirroring §6.4):
+
+```ts
+// Group keygen (libsodium X25519 + Ed25519, in the worker)
+generateGroupKeypair(): Promise<GroupKeyMaterial>; // {x25519Pub, ed25519Pub} out; private halves stay in-worker
+
+// Wrap the group PRIVATE key to a member (HPKE, target = member X25519 pub) → grant hpke_ct
+wrapGroupKeyToMember(groupPriv: GroupPrivHandle, memberX25519Pub: Uint8Array): Promise<Uint8Array>;
+
+// Unwrap the group private key from a grant with the caller's identity (HPKE)
+unwrapGroupKey(grantHpkeCt: Uint8Array, identity: IdentityPrivateKeys): Promise<GroupPrivHandle>;
+
+// Wrap a file DEK to a group PUBLIC key (HPKE, target = group X25519 pub)
+wrapDekToGroup(fk: FileKeyHandle, groupX25519Pub: Uint8Array): Promise<Uint8Array>;
+
+// Unwrap a DEK-to-group row with an already-unwrapped group private key (HPKE) → FileKeyHandle
+unwrapDekWithGroup(wrapped: Uint8Array, groupPriv: GroupPrivHandle): Promise<FileKeyHandle>;
+```
+
+- `wrapGroupKeyToMember` / `wrapDekToGroup` are the same `wrapToPublicKey` call ([§6.4](#64-cryptoengine-interface)) pointed at a member vs a group public key — one HPKE code path, no group-special primitive.
+- **Conformance ([18 §18.5](18-build-ci-testing.md)):** the group-key grant and DEK-to-group shapes are in the shared vectors — a group blob wrapped in web must unwrap in server/desktop/Android and vice-versa; `alg_id`, `enc` length, and framing drift fails the build (**P4.4-CORE-1**). No group fixture carries an unwrapped key.

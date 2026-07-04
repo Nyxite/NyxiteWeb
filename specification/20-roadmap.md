@@ -52,6 +52,18 @@ Every phase is gated by the **cross-client conformance vectors** ([18 §18.6](18
 **Deliver**: **key-transparency / safety-number verification UI** for the key directory ([13](13-sharing.md)); optional **blind-index hardening** for client-side search if the server adds a leak-free scheme ([11](11-search.md)); metadata-graph-hiding support if the server adds it.
 **Done when**: a user can verify a peer's safety number before sharing; any added index hardening leaks nothing to the server.
 
+## Phase 4.4 — Enterprise/family groups (group-key sharing, v1.0.0)
+> Cross-repo build-plan phase (server/desktop/android/web land together); the web step is **P4.4-WEB-1** ([../implementation/phase-4.4-groups.md](https://github.com/Nyxite/Nyxite)). It follows **Phase 4.3 (key transparency)** — the same key-transparency capability the web roadmap sketches under Phase 6 above, **pulled into v1.0.0** because group enrollment must wrap only to transparency-log-verified public keys (decision G-3). Both are in **v1.0.0**, before the release closer.
+
+**Deliver**: the **group-key layer** in the crypto worker ([06 §6.14](06-cryptography.md)) — group keypair (X25519 + Ed25519) generation, HPKE unwrap of the group private key from a grant, and unwrap/wrap of DEKs to a group public key (`alg_id`-tagged, no new primitive); **transparency-verified enrollment** (O(1) per member) and **group-key grant handling** ([07 §7.11](07-key-and-device-management.md)); the **group-management screen** — create/enroll/remove, member fingerprints, honest revocation UI ([13 §13.9](13-sharing.md)); the **reader-group attachment** cascade with **auto-wrap on file create** (author key **and** the attached group's public key — the enterprise "manager reads all" path) ([13 §13.9.3](13-sharing.md)); **scope-scoped rotate-on-remove** with the `412` re-seal / `409` concurrent-loser flow ([07 §7.11.4](07-key-and-device-management.md), [13 §13.9.4](13-sharing.md)); recovery restoring group access for free ([07 §7.11.5](07-key-and-device-management.md)).
+**Requires**: Phase 4.3 (key transparency) live; Phase 2 (account shares / HPKE wrap, rotation-based revocation) and Phase 0 (identity keys, recovery) complete.
+**Done when**:
+- **Family:** a member creates a group, enrolls others (one grant blob each), shares a folder to the group; every member's browser unwraps the group key then the per-file DEKs — the server held only opaque grants + DEK-to-group wraps + membership rows.
+- **Enterprise:** a project with a reader-group attachment = *managers* auto-wraps a worker's new file to the worker **and** the managers-group public key; a manager reads it, another worker cannot (cryptographically locked out).
+- **Enrollment is transparency-checked** (Phase 4.3): a directory-substituted key is rejected before any wrap.
+- **Removal** soft-deletes the grant instantly and a remaining member **rotates the affected scope** (generation+1, re-wrap to remaining, optional DEK re-seal); concurrent rotate → `409`, in-flight old-key wrap → `412` then re-seal; only the affected scope is touched; the "already-decrypted can't be recalled" caveat is surfaced.
+- **Recovery** restores group access with no special step; group blobs carry `alg_id`; group KAT/interop conformance vectors (group-key grant + DEK-to-group) pass with server/desktop/Android.
+
 > **Multi-account / instance switching is in v1.0.0** (foundation in Phase 0, switcher UI in Phase 4), not deferred — see [14](14-authentication.md).
 
 ## Cross-cutting / later

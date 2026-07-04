@@ -30,6 +30,13 @@ Next.js + shadcn/ui client. Primary surface for anonymous guest access.
 
 - Share link creation and management; for link shares the file key is placed in the URL fragment client-side; for account shares the file key is wrapped to the recipient's public key (HPKE) in the browser
 
+## Group sharing (enterprise/family)
+
+- Group management ([features/groups.md](groups.md)) in the browser worker: generate a group keypair, enroll/remove members, unwrap the group key → DEKs; enrollment **verifies the member's public key against the key-transparency log** before wrapping
+- Wrap a file/subtree DEK to a group public key; honor the per-project/folder **reader-group attachment** — auto-wrap new files to the attached group's public key (the enterprise "manager reads all" path)
+- Scope-scoped group-key rotation on member removal, with the `412` re-seal flow; honest UI that already-decrypted content can't be recalled
+- Recovering the identity key restores group access automatically
+
 ## Encryption & keys
 
 - Browser-side AES-256-GCM content encryption; HPKE wrapping/unwrapping of file keys
