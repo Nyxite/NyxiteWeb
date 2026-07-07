@@ -68,7 +68,7 @@ NyxiteWeb/
 │   │   └── logger.ts                 # scrubbing Logger facade ([02 §2.11], [17])
 │   │
 │   └── workers/                       # bundled as separate worker entries
-│       ├── crypto.worker.ts          # WASM (BLAKE3, Argon2id) + bulk AES-GCM/HPKE ([01 §1.6])
+│       ├── crypto.worker.ts          # WASM (BLAKE3, Argon2id, PQC ML-KEM/ML-DSA) + bulk AES-GCM/hybrid-HPKE ([01 §1.6])
 │       └── diff.worker.ts            # optional: large version diffs ([12])
 │
 ├── service-worker/                    # SW SOURCE (Workbox); built to public/sw.js — app-shell only ([16])

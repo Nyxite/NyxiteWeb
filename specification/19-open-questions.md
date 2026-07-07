@@ -13,7 +13,7 @@ Every web-specific open item is now **ratified** (this revision). Each entry bel
 | Multi-account | **Yes, from v1.0.0** — per-account IndexedDB/keys/cache/index; per-account instance host | [01 §1.8](01-architecture.md), [14](14-authentication.md) |
 | Library stack | shadcn/Tailwind, TanStack Query + Zustand, WebCrypto + hpke-js + libsodium + hash-wasm, CodeMirror 6, @microsoft/signalr, fetch + WebAuthn API (native auth; oidc-client-ts for enterprise Keycloak), MiniSearch, cbor-x | [02](02-tech-stack-and-libraries.md) |
 | **Key storage & lock** ([§19.1](#191-in-browser-key-storage--lock-model--decided)) | **Non-extractable WebCrypto vault key** wraps the identity bundle; unlock via **WebAuthn passkey where available, else passphrase**; idle auto-lock; **persistent ("remember this browser") by default** (session-only is a user choice) | [07 §7.3–7.4](07-key-and-device-management.md), [17](17-security.md) |
-| **X25519 / Ed25519 library** ([§19.3](#193-x25519--ed25519-library--decided-libsodium)) | **libsodium-wrappers-sumo (WASM)** — consistent across all browsers; behind `CryptoEngine` for a future native swap | [02 §2.6](02-tech-stack-and-libraries.md), [06 §6.2](06-cryptography.md) |
+| **Asymmetric crypto library — hybrid PQC** ([§19.3](#193-asymmetric-crypto-library--decided-libsodium-classical--hybrid-pqc-at-v100)) | **libsodium-wrappers-sumo (WASM)** for classical X25519/Ed25519 **+ an audited WASM PQC lib** for the ML-KEM-768/ML-DSA-65 hybrid halves (v1.0.0, NIST level 3); behind `CryptoEngine`. PQC lib choice is the one open follow-up | [02 §2.6](02-tech-stack-and-libraries.md), [06 §6.2](06-cryptography.md) |
 | **Argon2id params (default)** ([§19.2](#192-webcrypto--wasm-performance--decided-worker-offload)) | **m = 64 MiB, t = 3, p = 1** (matches server/Android; per-blob params in `kdf_params`) | [06 §6.8](06-cryptography.md), [07 §7.6](07-key-and-device-management.md) |
 | **Crypto execution** ([§19.2](#192-webcrypto--wasm-performance--decided-worker-offload)) | **All crypto offloaded to a Web Worker** (WebCrypto AES-GCM + WASM) | [01 §1.6](01-architecture.md), [06 §6.9](06-cryptography.md) |
 | **Storage persistence** ([§19.9](#199-storage-persistence--eviction--decided-persist--re-derivable)) | **`navigator.storage.persist()` + treat keys/subset as re-derivable**; encourage PWA install | [16 §16.5](16-offline-and-pwa.md), [17](17-security.md) |
@@ -31,7 +31,7 @@ The remaining work below is **validation spikes**, not undecided forks.
 **Decision.** The browser has no platform keystore, so:
 
 - **Vault key**: a **non-extractable WebCrypto `CryptoKey`** (AES-256-GCM); the handle itself is stored in IndexedDB (structured-clone). Its bits can't be read back as bytes — the nearest browser analogue to a keystore wrapping key.
-- **Identity bundle** (X25519 + Ed25519 private keys, FK cache) is **AES-256-GCM-wrapped by the vault key** and stored as ciphertext in IndexedDB. Unwrapped material lives only in the in-memory account `UserSession` ([01 §1.8](01-architecture.md)).
+- **Identity bundle** (hybrid X25519+ML-KEM-768 / Ed25519+ML-DSA-65 private keys, FK cache) is **AES-256-GCM-wrapped by the vault key** and stored as ciphertext in IndexedDB. Unwrapped material lives only in the in-memory account `UserSession` ([01 §1.8](01-architecture.md)).
 - **Unlock**: **WebAuthn/passkey** (PRF / `hmac-secret` extension to derive the unlock secret) **where available**, else **passphrase → Argon2id**; both gate the vault key.
 - **Persistence**: **persistent ("remember this browser") by default**; **session-only** is an explicit user choice (vault key dropped on tab close). **Idle auto-lock** (configurable, default ~10 min) evicts the in-memory session.
 
@@ -43,7 +43,7 @@ The remaining work below is **validation spikes**, not undecided forks.
 
 ## 19.2 WebCrypto & WASM performance — *DECIDED (worker offload)*
 
-**Decision.** All crypto runs in the **crypto Web Worker** ([01 §1.6](01-architecture.md)): WebCrypto `AES-GCM` (hardware-accelerated) for bulk seal/open; **hash-wasm** BLAKE3 (streamed) + Argon2id; **hpke-js** wrap/unwrap; **libsodium** X25519/Ed25519. Transfer `ArrayBuffer`s to avoid copies. **Argon2id default m = 64 MiB, t = 3, p = 1**, off-thread with a progress indicator; chosen params persisted in `recovery_blobs.kdf_params` so any browser can reproduce on recovery.
+**Decision.** All crypto runs in the **crypto Web Worker** ([01 §1.6](01-architecture.md)): WebCrypto `AES-GCM` (hardware-accelerated) for bulk seal/open; **hash-wasm** BLAKE3 (streamed) + Argon2id; **hpke-js** wrap/unwrap; **libsodium** X25519/Ed25519 + a **WASM PQC lib** (ML-KEM-768/ML-DSA-65) for the hybrid halves. Transfer `ArrayBuffer`s to avoid copies. **Argon2id default m = 64 MiB, t = 3, p = 1**, off-thread with a progress indicator; chosen params persisted in `recovery_blobs.kdf_params` so any browser can reproduce on recovery.
 
 **Validate.** Perf spike: seal/open throughput on large docs/blobs, BLAKE3 over large binaries, Argon2id wall-time on low/mid/high machines and mobile browsers; confirm 64 MiB does not OOM mobile Safari.
 
@@ -51,13 +51,15 @@ The remaining work below is **validation spikes**, not undecided forks.
 
 ---
 
-## 19.3 X25519 / Ed25519 library — *DECIDED (libsodium)*
+## 19.3 Asymmetric crypto library — *DECIDED (libsodium classical + hybrid PQC at v1.0.0)*
 
-**Decision.** Use **libsodium-wrappers-sumo (WASM)** for X25519 and Ed25519 — consistent, audited behaviour on every target and a clean building block under HPKE ([02 §2.6](02-tech-stack-and-libraries.md)). Kept behind `CryptoEngine` so a future native path can replace it without touching repositories.
+**Decision.** Use **libsodium-wrappers-sumo (WASM)** for the **classical** X25519 and Ed25519 halves — consistent, audited behaviour on every target and a clean building block under HPKE ([02 §2.6](02-tech-stack-and-libraries.md)). Kept behind `CryptoEngine` so a future native path can replace it without touching repositories.
 
-**Validate.** Confirm **hpke-js suite IDs match the server exactly** (DHKEM(X25519,HKDF-SHA256)/HKDF-SHA256/AES-256-GCM = `0x0020`/`0x0001`/`0x0002`) and that libsodium X25519/Ed25519 outputs interop with server/desktop/Android via the shared vectors ([18 §18.6](18-build-ci-testing.md)).
+**Post-quantum hybrid — resolved, hybrid at v1.0.0 (ratified 2026-07-07, [OPEN-DECISIONS](https://github.com/Nyxite/Nyxite/blob/main/docs/OPEN-DECISIONS.md)).** Every asymmetric seam ships **hybrid classical + PQC** from v1.0.0: HPKE key wrap / agreement = **X25519 + ML-KEM-768** (suite `X25519MLKEM768`), signatures = **Ed25519 + ML-DSA-65**, both **NIST level 3**; symmetric primitives are unchanged ([06 §6.2](06-cryptography.md)). This is **no longer a "future migration"** — it lands with v1. **Open follow-up/dependency [P]:** WebCrypto exposes no ML-KEM/ML-DSA and libsodium does not provide them, so the PQC halves need an **audited WASM PQC library** — the specific choice is the one remaining item, kept behind `CryptoEngine` and gated on the shared vectors ([06 §6.13](06-cryptography.md), [18 §18.8](18-build-ci-testing.md)).
 
-**Fallback.** Native WebCrypto Ed25519/X25519 on engines that fully support it (feature-detected), gated behind passing the same conformance vectors.
+**Validate.** Select the WASM PQC lib; confirm the **hybrid `X25519MLKEM768` HPKE suite id + hybrid-KEM construction and the Ed25519+ML-DSA-65 signature suite match the server exactly** (classical half DHKEM(X25519,HKDF-SHA256)/HKDF-SHA256/AES-256-GCM = `0x0020`/`0x0001`/`0x0002`), and that libsodium X25519/Ed25519 **and** the PQC lib's ML-KEM-768/ML-DSA-65 outputs interop with server/desktop/Android via the shared vectors ([18 §18.6](18-build-ci-testing.md)).
+
+**Fallback.** Native WebCrypto Ed25519/X25519 on engines that fully support it (feature-detected, classical halves only), gated behind passing the same conformance vectors; the PQC halves stay on the WASM lib (no native option exists).
 
 ---
 
@@ -86,7 +88,7 @@ The remaining work below is **validation spikes**, not undecided forks.
 These track the **server's canonical ledger**; the client must match each exactly and **lock it via shared conformance vectors** ([18 §18.6](18-build-ci-testing.md)), failing CI on any drift. Each has a **failing-by-default conformance test** that turns green when confirmed.
 
 - **PINNED** — frame `magic` = `"NYXC"`, `version` = `0x01`, AAD = `magic ‖ version ‖ key_id ‖ file_id ‖ object_kind`, with the `object_kind` enum ([06 §6.3](06-cryptography.md)).
-- **PINNED** — **HPKE suite IDs**: DHKEM(X25519, HKDF-SHA256)/HKDF-SHA256/AES-256-GCM = `KEM 0x0020`, `KDF 0x0001`, `AEAD 0x0002` ([06 §6.2](06-cryptography.md)).
+- **PINNED** — **Hybrid HPKE suite**: `X25519MLKEM768` — classical DHKEM(X25519, HKDF-SHA256) `KEM 0x0020` concatenated with **ML-KEM-768** / HKDF-SHA256 `0x0001` / AES-256-GCM `0x0002` (NIST level 3), plus the **hybrid Ed25519 + ML-DSA-65** signature suite ([06 §6.2](06-cryptography.md)).
 - **PINNED** — recovery-escrow = **AES-256-GCM under the Argon2id-derived key** (not HPKE), shape + `AAD = userId ‖ version` ([06 §6.4](06-cryptography.md), [07](07-key-and-device-management.md)).
 - **PINNED** — snapshot/compaction triggers (**≥ 200 updates / 5 min / last-leave**) ([09 §9.8](09-realtime-collaboration.md)).
 - **PINNED** — token lifetimes: access ~5 min; **relay socket ticket single-use 60 s**; **guest share-session 15 min** renewable ([14 §14.5](14-authentication.md)).
@@ -143,7 +145,7 @@ These track the **server's canonical ledger**; the client must match each exactl
 |---|------|----------|-----------------------------|-------|------|
 | 19.1 | Key storage & lock | Vault key + WebAuthn/passphrase; persistent default; idle lock | Cross-engine spike | Web | Phase 0 |
 | 19.2 | WebCrypto/WASM perf | Worker offload; Argon2id m=64 MiB,t=3,p=1 | Perf spike at editing scale | Web | Phase 0 |
-| 19.3 | X25519/Ed25519 | libsodium (WASM) | hpke-js suite-id + interop check | Web | Phase 0 |
+| 19.3 | Asymmetric crypto (hybrid PQC) | libsodium (classical) + WASM PQC lib (ML-KEM-768/ML-DSA-65); hybrid at v1.0.0 | Select PQC lib; hybrid `X25519MLKEM768` suite-id + interop check | Web | Phase 0 |
 | 19.4 | Guest data | In-memory only; fragment strip; 15-min token | Leakage audit | Web | Phase 2 |
 | 19.5 | Search scope | MiniSearch local subset; title-only fallback | Index-size/quota check | Web | Phase 1 |
 | 19.6 | Protocol PINNED values | Pinned to server | Conformance lock (failing-by-default tests); `/sync` payloads track | Server → Web | Per phase |
@@ -170,7 +172,7 @@ Group sharing ([features/groups.md](https://github.com/Nyxite/Nyxite), [06 §6.1
 
 ### 19.12.2 WASM HPKE performance for group unwrap/rotation
 
-**Decision.** Group wrap/unwrap runs in the **crypto worker** on the existing **hpke-js + libsodium** WASM stack (§19.2/§19.3), transferring `ArrayBuffer`s. Enrollment is **O(1)** (one grant); the heaviest op is **scope rotation** — re-wrap the group key to N remaining members + optional re-seal of the scope's DEKs — which is N small HPKE wraps, not content re-encryption ([07 §7.11.4](07-key-and-device-management.md), [13 §13.9](13-sharing.md)).
+**Decision.** Group wrap/unwrap runs in the **crypto worker** on the existing **hpke-js + libsodium + WASM PQC** stack (the hybrid `X25519MLKEM768` suite, §19.2/§19.3), transferring `ArrayBuffer`s. Enrollment is **O(1)** (one grant); the heaviest op is **scope rotation** — re-wrap the group key to N remaining members + optional re-seal of the scope's DEKs — which is N small HPKE wraps, not content re-encryption ([07 §7.11.4](07-key-and-device-management.md), [13 §13.9](13-sharing.md)).
 
 **Validate.** Perf spike: group-key unwrap + DEK-to-group unwrap latency on read; rotation wall-time for a large group / large scope (many DEKs) on low/mid machines and mobile Safari; confirm the browser — the **most storage- and memory-constrained** client — stays responsive and does not OOM on a big re-seal.
 

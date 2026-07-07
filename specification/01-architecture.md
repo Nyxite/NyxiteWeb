@@ -72,7 +72,7 @@ Repository interfaces (`FileRepository`, `StructureRepository`, `KeyRepository`,
 | `LocalStore` | Single source of truth for structure, sync state, cached metadata/plaintext, search index | IndexedDB via **Dexie** ([04](04-local-data-model.md)) |
 | `ApiClient` | Typed REST over `/api/v1`, ciphertext bodies, problem+json errors, idempotency | `fetch` + **TanStack Query** ([05](05-api-client.md)) |
 | `RelayClient` | SignalR `RelayHub` connection, join/submit/awareness, reconnect | **@microsoft/signalr** ([09](09-realtime-collaboration.md)) |
-| `CryptoEngine` | seal/open framed objects, HPKE wrap/unwrap, sign/verify, content address, recovery KDF | **WebCrypto + hpke-js + libsodium + hash-wasm** ([06](06-cryptography.md)) |
+| `CryptoEngine` | seal/open framed objects, hybrid-HPKE wrap/unwrap, hybrid sign/verify, content address, recovery KDF | **WebCrypto + hpke-js + libsodium + hash-wasm + a WASM PQC lib** (ML-KEM-768/ML-DSA-65) ([06](06-cryptography.md)) |
 | `CrdtEngine` | Apply/encode Yjs updates, state vectors, snapshots | **Yjs** ([09](09-realtime-collaboration.md)) |
 | `KeyVault` | Hold/seal the identity-key handles; gate unlock | **non-extractable WebCrypto `CryptoKey` in IndexedDB** ([07](07-key-and-device-management.md)) |
 | `BlobCache` | Store/evict cached ciphertext and decrypted blobs (ink/binary) | **Cache Storage** + IndexedDB ([16](16-offline-and-pwa.md)) |
@@ -82,7 +82,7 @@ Repository interfaces (`FileRepository`, `StructureRepository`, `KeyRepository`,
 
 Browsers are single-threaded on the main thread; CPU-bound crypto/CRDT/diff must not block UI:
 
-- **Crypto Worker** — a dedicated **Web Worker** hosts the WASM (BLAKE3, Argon2id) and bulk AES-GCM/HPKE work so framing, content addressing, Argon2id derivation, and large-blob seal/open run off the main thread. WebCrypto is available in workers; transfer `ArrayBuffer`s to avoid copies. **[P]**
+- **Crypto Worker** — a dedicated **Web Worker** hosts the WASM (BLAKE3, Argon2id, and the PQC ML-KEM-768/ML-DSA-65 halves) and bulk AES-GCM / hybrid-HPKE work so framing, content addressing, Argon2id derivation, and large-blob seal/open run off the main thread. WebCrypto is available in workers; transfer `ArrayBuffer`s to avoid copies. **[P]**
 - **Diff** for version history runs in the crypto worker (or a small diff worker) to keep large diffs smooth ([12](12-version-history.md)).
 - **CRDT merge** runs on the main thread for the active editor (Yjs is fast and tightly coupled to editor bindings), but batch/catch-up merges of large logs may be offloaded; benchmark and decide per [19](19-open-questions.md).
 - **Service Worker** ([16](16-offline-and-pwa.md)) handles the app-shell cache and offline navigation; it **does not** decrypt content or hold keys (it is a separate, less-trusted context — see [17](17-security.md)).

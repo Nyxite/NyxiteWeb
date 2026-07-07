@@ -18,7 +18,7 @@ Installability requires HTTPS (secure context), a registered service worker, and
 
 ## 16.2 Service worker (Workbox)
 
-- **Precache** the app shell (HTML shell, JS/CSS chunks, WASM for BLAKE3/Argon2id, fonts, icons) via Workbox precaching with revision hashes, so the app boots offline and is integrity-checked ([17 §17.7](17-security.md)).
+- **Precache** the app shell (HTML shell, JS/CSS chunks, WASM for BLAKE3/Argon2id and the PQC ML-KEM-768/ML-DSA-65 halves, fonts, icons) via Workbox precaching with revision hashes, so the app boots offline and is integrity-checked ([17 §17.7](17-security.md)).
 - **Runtime caching** is deliberately narrow:
 
 | Request | Strategy | Rationale |

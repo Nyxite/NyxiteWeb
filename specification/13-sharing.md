@@ -13,10 +13,10 @@ The web client is the **primary surface for anonymous guest access** ([00 §0.7]
 
 The sharer grants a named Nyxite user; the FK is wrapped to that user's published public key so only they can unwrap it.
 
-1. **Look up the grantee.** `GET /keys/directory?userId=` or `?email=`; cache as a directory entry ([04](04-local-data-model.md)). **Verify the entry's Ed25519 self-signature** before trusting the X25519 public key ([06 §6.7](06-cryptography.md)); a failed signature aborts the share.
-2. **Wrap the FK.** `CryptoEngine.hpkeWrap(fk, granteeX25519Pub)` using exactly DhkemX25519HkdfSha256 / HkdfSha256 / Aes256Gcm ([06 §6.4](06-cryptography.md)).
+1. **Look up the grantee.** `GET /keys/directory?userId=` or `?email=`; cache as a directory entry ([04](04-local-data-model.md)). **Verify the entry's hybrid Ed25519 + ML-DSA-65 self-signature** (both halves) before trusting the X25519 + ML-KEM-768 public key ([06 §6.7](06-cryptography.md)); a failed signature aborts the share.
+2. **Wrap the FK.** `CryptoEngine.hpkeWrap(fk, granteeHybridPub)` using the v1 **hybrid `X25519MLKEM768`** HPKE suite (classical DhkemX25519HkdfSha256 + ML-KEM-768 / HkdfSha256 / Aes256Gcm, [06 §6.2](06-cryptography.md), [06 §6.4](06-cryptography.md)).
 3. **Create the grant.** `POST /shares { targetType, targetId, kind: "user_grant", granteeId, permission }` plus `POST /files/{id}/keys` carrying the **wrapped blob** (or the combined create-share payload). The server stores only the opaque blob — it never sees the FK.
-4. **Grantee unwraps.** The grantee's browser `GET /files/{id}/keys` → `CryptoEngine.hpkeUnwrap(blob, identityX25519Priv)` → decrypts content. No server key exchange occurred.
+4. **Grantee unwraps.** The grantee's browser `GET /files/{id}/keys` → `CryptoEngine.hpkeUnwrap(blob, identityHybridPriv)` (X25519+ML-KEM-768) → decrypts content. No server key exchange occurred.
 
 ### Subtree shares (folder / project)
 
@@ -75,7 +75,7 @@ The two gates are independent: the **server ACL** uses this maximum to gate ciph
 
 - A per-target management panel lists active shares: `GET /shares?targetType={file|folder|project}&targetId={id}` — each row shows kind (grantee or "link"), permission, and expiry.
 - Change permission/expiry: `PATCH /shares/{id}`; revoke: `DELETE /shares/{id}` ([§13.6](#136-revocation-two-layer)).
-- For account shares, surface the grantee's **key fingerprint** (BLAKE3 over the directory entry's public keys) so cautious users can compare out-of-band. Full key-transparency / safety-number verification is **deferred to Phase 6** ([19](19-open-questions.md)); until then trust is **TLS + Ed25519 self-signature** on the directory entry.
+- For account shares, surface the grantee's **key fingerprint** (BLAKE3 over the directory entry's public keys) so cautious users can compare out-of-band. Full key-transparency / safety-number verification is **deferred to Phase 6** ([19](19-open-questions.md)); until then trust is **TLS + the hybrid Ed25519 + ML-DSA-65 self-signature** on the directory entry.
 
 ## 13.6 Revocation (two-layer)
 

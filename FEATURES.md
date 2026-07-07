@@ -39,8 +39,8 @@ Next.js + shadcn/ui client. Primary surface for anonymous guest access.
 
 ## Encryption & keys
 
-- Browser-side AES-256-GCM content encryption; HPKE wrapping/unwrapping of file keys
-- Device/identity key handling in the browser, including recovery via the user's recovery phrase unwrapping the client-encrypted recovery blob (AES-256-GCM under an Argon2id-derived key)
+- Browser-side AES-256-GCM content encryption; **hybrid HPKE (X25519 + ML-KEM-768)** wrapping/unwrapping of file keys — post-quantum hybrid at v1.0.0
+- Device/identity key handling in the browser (hybrid X25519+ML-KEM-768 / Ed25519+ML-DSA-65 keys), including recovery via the user's recovery phrase unwrapping the client-encrypted recovery blob (AES-256-GCM under an Argon2id-derived key — symmetric, unchanged)
 
 ## Authentication
 
@@ -51,7 +51,8 @@ Next.js + shadcn/ui client. Primary surface for anonymous guest access.
 See [../docs/OPEN-DECISIONS.md](../docs/OPEN-DECISIONS.md). Web-specific:
 
 - In-browser key storage and recovery — where the identity private key lives (IndexedDB / non-extractable WebCrypto keys), session vs persistent, and the recovery-phrase UX in a browser
-- WebCrypto coverage and performance for AES-256-GCM + HPKE (X25519) at editing scale
+- WebCrypto coverage and performance for AES-256-GCM + **hybrid HPKE (X25519 + ML-KEM-768)** at editing scale
+- **Selecting an audited WASM PQC library** for the hybrid ML-KEM-768 / ML-DSA-65 halves — WebCrypto exposes no ML-KEM/ML-DSA, so a WASM PQC lib is a required follow-up dependency (kept behind `CryptoEngine`, gated on the shared conformance vectors)
 - Guest session model: how anonymous link sessions are issued, scoped, and expired, with the fragment key never reaching the server
 - In-browser ink editing (pointer events / canvas) and parity with native clients
 - Read-only vs editable guest links and the per-link permission UI

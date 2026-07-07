@@ -8,7 +8,7 @@ The web client ships as a **static bundle** with **no server runtime** ([00 §0.
 - **Next.js 15 App Router** with **`output: 'export'`** → a static `out/` of HTML/JS/CSS/WASM. SSR, route handlers, middleware, and image optimization are disabled by config — a build that introduces a server-only API must **fail** ([02 §2.1](02-tech-stack-and-libraries.md)).
 - **TypeScript `strict`**; `tsc --noEmit` is a build-blocking step, not advisory.
 - Asset hashing: all JS/CSS/WASM emitted with **content-hashed filenames** (cache-busting) so the CDN can serve them `immutable` and the service worker can precache by revision ([§18.2](#182-distribution--deployment)).
-- **WASM bundling**: `hash-wasm` (BLAKE3, Argon2id), `libsodium-wrappers-sumo`, the `hpke-js` build, and the CBOR codec ship as **self-hosted, content-hashed `.wasm`/JS assets** — never fetched from a third-party CDN (CSP forbids it, [17](17-security.md)). WASM is loaded inside the **crypto Web Worker** ([01 §1.6](01-architecture.md)); verify the bundler emits worker chunks + their WASM as same-origin assets.
+- **WASM bundling**: `hash-wasm` (BLAKE3, Argon2id), `libsodium-wrappers-sumo`, the `hpke-js` build, the **WASM PQC library** (ML-KEM-768 / ML-DSA-65), and the CBOR codec ship as **self-hosted, content-hashed `.wasm`/JS assets** — never fetched from a third-party CDN (CSP forbids it, [17](17-security.md)). WASM is loaded inside the **crypto Web Worker** ([01 §1.6](01-architecture.md)); verify the bundler emits worker chunks + their WASM as same-origin assets.
 - **Service worker** built with **Workbox** ([02 §2.9](02-tech-stack-and-libraries.md)): precache manifest = the hashed app-shell assets; runtime routes for navigation fallback. The SW build is part of the export, after asset hashing, so the precache revisions match.
 
 ### Build outputs
@@ -56,7 +56,7 @@ CI fails on a budget breach (`size-limit` or the bundler analyzer with threshold
 
 | Layer | Tools | Focus |
 |-------|-------|-------|
-| **Crypto conformance** | Vitest + shared KAT/cross-client vectors | **AES-GCM framing, HPKE wrap/unwrap, Ed25519, X25519, BLAKE3, Argon2id** interop byte-for-byte with server/desktop/Android. Wrap in browser → unwrap on server impl and vice-versa. **Highest priority** ([06 §6.9](06-cryptography.md), [§18.6](#186-conformance-vectors-the-critical-gate)). |
+| **Crypto conformance** | Vitest + shared KAT/cross-client vectors | **AES-GCM framing, hybrid HPKE wrap/unwrap (X25519+ML-KEM-768), hybrid signatures (Ed25519+ML-DSA-65), BLAKE3, Argon2id** interop byte-for-byte with server/desktop/Android. Wrap in browser → unwrap on server impl and vice-versa. **Highest priority** ([06 §6.9](06-cryptography.md), [§18.6](#186-conformance-vectors-the-critical-gate)). |
 | **CRDT conformance** | Vitest + shared Yrs wire vectors | Yjs is the **reference**, but still pinned vs ydotnet (desktop) and yrs/UniFFI (Android): identical merged state, identical encoded updates, state-vector reconstruction ([09 §9.12](09-realtime-collaboration.md)). |
 | Domain | Vitest | Use cases, policy, conflict/sync state machine — **pure TS**, no DOM/IO ([01 §1.4](01-architecture.md)). |
 | Data (repos) | Vitest + **fake-indexeddb** + a fake/mocked server | Dexie schema + migrations (asserted), API mapping, problem+json error mapping, outbox/idempotency, delta/manifest reconcile ([04](04-local-data-model.md), [05](05-api-client.md), [08](08-sync-engine.md)). |
@@ -89,9 +89,9 @@ Interop is non-negotiable in a zero-knowledge multi-client system. The build **f
 - Shared vector files (KATs + cross-client pairs) are **co-owned with server/desktop/Android** and checked into the web repo's `core-crypto` test resources, updated in lockstep ([android 18 §18.6](https://github.com/Nyxite/NyxiteAndroid)).
 - Coverage:
   - **AES-256-GCM framing** — `magic "NYXC" | version 0x01 | key_id | nonce | ciphertext | tag`, AAD = `magic ‖ version ‖ key_id ‖ file_id ‖ object_kind`; decrypt server-produced frames and produce byte-identical frames for fixed inputs ([06 §6.3](06-cryptography.md)).
-  - **HPKE wrap/unwrap interop** — DHKEM(X25519,HKDF-SHA256)/HKDF-SHA256/AES-256-GCM (`KEM 0x0020`/`KDF 0x0001`/`AEAD 0x0002`); browser wraps an FK → server/desktop/Android unwrap, and vice-versa ([06 §6.4](06-cryptography.md)).
-  - **Ed25519** sign/verify, **X25519** agreement, **BLAKE3-256** content addressing, **Argon2id** derivation against fixed `kdf_params` (m=64 MiB, t=3, p=1 floor — [19 §19.3](19-open-questions.md)) — all against shared KATs.
-- A spike confirms **hpke-js suite IDs match exactly** and **libsodium X25519/Ed25519** match the server's outputs ([19 §19.2](19-open-questions.md), [19 §19.4](19-open-questions.md)).
+  - **Hybrid HPKE wrap/unwrap interop** — the v1 **`X25519MLKEM768`** suite (classical DHKEM(X25519,HKDF-SHA256) `KEM 0x0020` **concatenated** with ML-KEM-768) / HKDF-SHA256 `0x0001` / AES-256-GCM `0x0002`; browser wraps an FK → server/desktop/Android unwrap, and vice-versa, including the enlarged hybrid `enc` ([06 §6.2](06-cryptography.md), [06 §6.4](06-cryptography.md)).
+  - **Hybrid Ed25519 + ML-DSA-65** sign/verify (both halves), **X25519 + ML-KEM-768** hybrid agreement, **BLAKE3-256** content addressing, **Argon2id** derivation against fixed `kdf_params` (m=64 MiB, t=3, p=1 floor — [19 §19.3](19-open-questions.md)) — all against shared KATs.
+- A spike confirms **the hybrid `X25519MLKEM768` suite IDs and hybrid-KEM construction match exactly**, that **libsodium X25519/Ed25519** and the **WASM PQC lib's ML-KEM-768/ML-DSA-65** outputs match the server's ([19 §19.2](19-open-questions.md), [19 §19.3](19-open-questions.md)).
 
 ### CRDT wire-protocol conformance
 
@@ -103,7 +103,7 @@ Interop is non-negotiable in a zero-knowledge multi-client system. The build **f
 
 ### Failing-by-default tracking tests
 
-For each **server-owned PINNED value** ([19 §19.6](19-open-questions.md)) there is a conformance test that is **red until the value is confirmed against the server ledger** and then locks it: frame magic/version/AAD/`object_kind` enum, HPKE suite IDs, recovery AES-GCM-under-Argon2id scheme (AAD = `userId ‖ version`), snapshot triggers (≥200 / 5 min / last-leave), token lifetimes (access ~5 min / socket ticket 60 s single-use / guest share-session 15 min).
+For each **server-owned PINNED value** ([19 §19.6](19-open-questions.md)) there is a conformance test that is **red until the value is confirmed against the server ledger** and then locks it: frame magic/version/AAD/`object_kind` enum, the hybrid `X25519MLKEM768` HPKE suite IDs + hybrid signature suite, recovery AES-GCM-under-Argon2id scheme (AAD = `userId ‖ version`), snapshot triggers (≥200 / 5 min / last-leave), token lifetimes (access ~5 min / socket ticket 60 s single-use / guest share-session 15 min).
 
 ## 18.7 CI pipeline
 
@@ -127,8 +127,8 @@ For each **server-owned PINNED value** ([19 §19.6](19-open-questions.md)) there
 
 ## 18.8 Early validation spikes (do these first)
 
-1. **Crypto/WASM perf spike** — AES-256-GCM + HPKE(X25519) + Argon2id + BLAKE3 in the crypto worker at editing scale (large docs/blobs) across Chromium/Firefox/Safari ([19 §19.2](19-open-questions.md)).
-2. **hpke-js suite-id check** — confirm exact match to the server's X25519/HKDF-SHA256/AES-256-GCM suite; confirm libsodium X25519/Ed25519 interop ([19 §19.4](19-open-questions.md)).
+1. **Crypto/WASM perf spike** — AES-256-GCM + hybrid HPKE(X25519+ML-KEM-768) + Argon2id + BLAKE3 in the crypto worker at editing scale (large docs/blobs) across Chromium/Firefox/Safari, including the added cost of the WASM PQC lib and larger wrapped-key/signature sizes ([19 §19.2](19-open-questions.md)).
+2. **WASM PQC library + hybrid-suite-id spike** — select an audited WASM PQC lib (ML-KEM-768 / ML-DSA-65) and confirm the hybrid `X25519MLKEM768` HPKE suite id and hybrid signatures match the server exactly; confirm libsodium X25519/Ed25519 and the PQC lib's ML-KEM/ML-DSA interop byte-for-byte ([19 §19.3](19-open-questions.md)).
 3. **Key-storage/lock spike** — non-extractable WebCrypto vault key wrapping the identity bundle; WebAuthn/passphrase unlock; idle lock; behavior across Chromium/Firefox/Safari ([19 §19.1](19-open-questions.md)).
 4. **SignalR-in-browser spike** — `@microsoft/signalr` binary `EncryptedUpdate`, group join/leave, reconnect/backoff, guest share-token upgrade ([09](09-realtime-collaboration.md)).
 5. **Multi-tab coordination spike** — Web Locks / BroadcastChannel single-relay/single-syncing-tab election ([19 §19.8](19-open-questions.md)).

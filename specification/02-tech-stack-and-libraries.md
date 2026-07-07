@@ -59,13 +59,14 @@ All primitives must match the server's ledger ([server 07 §7.3](https://github.
 | Purpose | Library | Notes |
 |---------|---------|-------|
 | AES-256-GCM (content / CRDT / snapshots / names / recovery blob) | **WebCrypto `SubtleCrypto`** (`AES-GCM`) | Hardware-accelerated; keys held as **non-extractable** `CryptoKey` where possible. 96-bit nonce, 128-bit tag. |
-| HPKE wrap (file-key to a member; device enrollment to a device pubkey) | **hpke-js** (`@hpke/core`) | Configure **exactly** DhkemX25519HkdfSha256 / HkdfSha256 / Aes256Gcm (RFC 9180 `KEM 0x0020`, `KDF 0x0001`, `AEAD 0x0002`); conformance-test against server/desktop/Android ([06 §6.4](06-cryptography.md)). |
-| X25519 + Ed25519 | **libsodium-wrappers-sumo** (WASM) | Consistent X25519/Ed25519 across all browsers (WebCrypto Ed25519/X25519 support is uneven); also a fallback HPKE building block. |
-| BLAKE3-256 (content addressing) | **hash-wasm** (`blake3`) | Streamed hashing of large blobs; test vectors verified. |
-| Argon2id (recovery-key derivation) | **hash-wasm** (`argon2id`) | Params from `recovery_blobs.kdf_params` (m=64 MiB, t=3, p=1 floor; tune — [19 §19.3](19-open-questions.md)); run in the crypto worker. |
+| Hybrid HPKE wrap (file-key to a member; device enrollment to a device pubkey) | **hpke-js** (`@hpke/core`) **+ a WASM PQC KEM** | v1 KEM is the **hybrid `X25519MLKEM768`** — classical DhkemX25519HkdfSha256 (RFC 9180 `KEM 0x0020`) concatenated with **ML-KEM-768** — with HkdfSha256 (`KDF 0x0001`) / Aes256Gcm (`AEAD 0x0002`); NIST level 3. **WebCrypto ships no ML-KEM**, so the PQC half needs a WASM PQC lib (follow-up, [06 §6.13](06-cryptography.md)); conformance-test against server/desktop/Android ([06 §6.4](06-cryptography.md)). |
+| X25519 + Ed25519 (classical halves of the hybrid suites) | **libsodium-wrappers-sumo** (WASM) | Consistent X25519/Ed25519 across all browsers (WebCrypto Ed25519/X25519 support is uneven); also a fallback HPKE building block. |
+| ML-KEM-768 + ML-DSA-65 (PQC halves — hybrid) **[P]** | **audited WASM PQC library** (choice TBD) | Neither WebCrypto nor libsodium exposes ML-KEM/ML-DSA; a dedicated WASM PQC lib supplies the post-quantum halves of the hybrid HPKE KEM and hybrid signatures, byte-compatible with server/desktop/Android. Self-hosted WASM, behind `CryptoEngine`, gated on the shared vectors ([06 §6.2](06-cryptography.md), [06 §6.13](06-cryptography.md)). |
+| BLAKE3-256 (content addressing) — *unchanged, quantum-safe* | **hash-wasm** (`blake3`) | Streamed hashing of large blobs; test vectors verified. |
+| Argon2id (recovery-key derivation) — *unchanged, quantum-safe; no PQC/pepper* | **hash-wasm** (`argon2id`) | Params from `recovery_blobs.kdf_params` (m=64 MiB, t=3, p=1 floor; tune — [19 §19.3](19-open-questions.md)); run in the crypto worker. |
 | CSPRNG | **`crypto.getRandomValues`** | FK and nonce generation. |
 
-> Crypto-agility: the encrypted frame carries `version` and `key_id`/generation, so primitives can rotate without a format break ([06 §6.3](06-cryptography.md)). The WASM crypto runs in a **Web Worker** ([01 §1.6](01-architecture.md)).
+> Crypto-agility: the encrypted frame carries `version` and `key_id`/generation, so primitives can rotate without a format break ([06 §6.3](06-cryptography.md)). The WASM crypto runs in a **Web Worker** ([01 §1.6](01-architecture.md)). The **asymmetric** primitives ship **post-quantum hybrid at v1.0.0** — X25519+ML-KEM-768 key wrap and Ed25519+ML-DSA-65 signatures, NIST level 3; symmetric primitives (AES-256-GCM, Argon2id, BLAKE3) are unchanged ([06 §6.2](06-cryptography.md)).
 
 ## 2.7 CRDT
 

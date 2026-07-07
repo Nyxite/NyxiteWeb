@@ -58,7 +58,7 @@ Explicitly **out of scope for v1.0.0** (deferred, matching server Phase 5–6 an
 |--------|----------|-----------|
 | Browsers | **Evergreen Chromium (Chrome/Edge), Firefox, Safari** — last 2 major versions | Need WebCrypto, IndexedDB, Service Workers, WebAssembly, Pointer Events, WebSockets. **[P]** |
 | Secure context | **HTTPS only** (or `localhost` in dev) | WebCrypto, Service Workers, and clipboard require a secure context ([17](17-security.md)). |
-| WASM | Required | BLAKE3 + Argon2id run as WASM ([06](06-cryptography.md)). |
+| WASM | Required | BLAKE3, Argon2id, and the **PQC halves** (ML-KEM-768 / ML-DSA-65) run as WASM ([06 §6.13](06-cryptography.md)). |
 | Form factors | Desktop, tablet, phone; responsive | shadcn/Tailwind responsive layout; list/detail on wide screens ([15](15-ui-and-navigation.md)). |
 | Stylus | Pointer Events (`pressure`, `tiltX/tiltY`) where the device/browser exposes them | Browser ink fidelity is below native; view + basic editing only ([10](10-editors.md)). |
 | Offline | First-class via PWA | Installable, service-worker app shell, IndexedDB-persisted subset ([16](16-offline-and-pwa.md)). |
@@ -78,10 +78,10 @@ Browsers without the required APIs (e.g. WebCrypto absent, third-party-storage p
 ## 0.8 Glossary (client-facing)
 
 - **FK (file key)** — per-file AES-256-GCM 256-bit key, generated in-browser, stored on the server only *wrapped*.
-- **Identity keypair** — per-user X25519 (HPKE/key-agreement) + Ed25519 (signing); private parts never leave the browser/account session.
+- **Identity keypair** — per-user **hybrid** keypair: X25519 + ML-KEM-768 (HPKE/key-agreement) and Ed25519 + ML-DSA-65 (signing), classical + PQC concatenated at NIST level 3 ([06 §6.2](06-cryptography.md)); private parts never leave the browser/account session.
 - **Device** — in the web client, a *browser profile* counts as a device for enrollment; its enrollment keypair approves the session's access to the identity private key ([07](07-key-and-device-management.md)).
 - **Recovery key** — high-entropy user-held secret (BIP39 phrase) that, via Argon2id, wraps an escrow of the identity private key (AES-256-GCM); the only recovery path.
-- **Wrapped key** — an FK encrypted to a member's X25519 public key via HPKE (account share).
+- **Wrapped key** — an FK encrypted to a member's hybrid X25519+ML-KEM-768 public key via hybrid HPKE (account share).
 - **Fragment key** — an FK carried in a share link's URL fragment (`#k=…`), never sent to the server (link/guest share).
 - **Content address** — BLAKE3-256 hash of the *plaintext*, used as the blob's storage key; computed in-browser.
 - **Encrypted frame** — the on-the-wire/at-rest container: `magic(4)|version(1)|key_id(16)|nonce(12)|ciphertext|tag(16)` with AAD binding `file_id` + `object_kind` ([06](06-cryptography.md)).

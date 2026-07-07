@@ -12,7 +12,8 @@ The server-side model is [server 13](https://github.com/Nyxite/NyxiteServer) (ze
 | Threat | Defended by | Residual / boundary |
 |--------|-------------|---------------------|
 | Server / operator compromise | **E2EE** — no content key ever on the server | Metadata (structure, sizes, timestamps) visible |
-| Network attacker | TLS + only ciphertext on the wire; BLAKE3 verify on download, Ed25519 verify on directory/updates | Traffic analysis on sizes/timing |
+| Network attacker | TLS + only ciphertext on the wire; BLAKE3 verify on download, hybrid Ed25519+ML-DSA-65 verify on directory/updates | Traffic analysis on sizes/timing |
+| Harvest-now-decrypt-later (future quantum) | Asymmetric seams are **hybrid X25519+ML-KEM-768 / Ed25519+ML-DSA-65** from v1.0.0 ([06 §6.2](06-cryptography.md)), so stored wrapped keys resist a future quantum adversary | Classical-only ciphertext never shipped |
 | **XSS (top web threat)** | Strict CSP, Trusted Types, sanitized rendering, no inline/eval, self-hosted code (§17.3) | A script-execution bug in-page can read an unlocked session — minimized, not eliminated |
 | Malicious browser extension | Same-origin isolation; least surface; cannot read non-extractable key bytes | A content-script-capable extension can read page DOM/plaintext — out of the app's control |
 | Shared / public machine | Session-only mode (no persistence), idle auto-lock, explicit logout/clear | A keylogger/compromised OS defeats this — advise against use on untrusted machines |
@@ -33,7 +34,7 @@ XSS is the **top** web threat: any script running in the page runs with full acc
 
 Cached plaintext (the local subset, [16](16-offline-and-pwa.md)) and wrapped key material live in **IndexedDB**; ciphertext blobs in Cache Storage. The browser has no platform keystore, so the analogue is built from WebCrypto:
 
-- The **identity bundle** (private X25519/Ed25519) is wrapped under a **non-extractable WebCrypto vault `CryptoKey`** stored in IndexedDB ([07](07-key-and-device-management.md)) — its private bits cannot be read back out as bytes by page script.
+- The **identity bundle** (private X25519+ML-KEM-768 / Ed25519+ML-DSA-65 hybrid keys) is wrapped under a **non-extractable WebCrypto vault `CryptoKey`** stored in IndexedDB ([07](07-key-and-device-management.md)) — its private bits cannot be read back out as bytes by page script.
 - **Optional unlock** gates the vault key: **WebAuthn passkey preferred**, or a passphrase (Argon2id-derived, [06](06-cryptography.md)); plus **idle auto-lock** that drops the in-memory unwrapped keys and decrypted state.
 - **Session-only vs. persistent** ("remember this browser") is a user choice: session-only keeps nothing across tabs-closed; persistent requests durable storage but requires unlock on return.
 - **File-key handles** are kept as non-extractable `CryptoKey`s where the algorithm allows; **per-account isolation** (separate IndexedDB DB, blob partition, index per `accountId`, [01 §1.8](01-architecture.md)) means one account's compromise can't read another's.

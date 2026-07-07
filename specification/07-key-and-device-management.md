@@ -6,34 +6,35 @@ Covers the identity keypair, treating a **browser as a device**, in-browser key 
 
 ```
 Vault key (non-extractable WebCrypto AES-GCM CryptoKey, in IndexedDB)   [P]
-   └─ wraps → Identity bundle blob (X25519 priv ‖ Ed25519 priv), AES-GCM
+   └─ wraps → Identity bundle blob (hybrid private keys: X25519 ‖ ML-KEM-768 ‖ Ed25519 ‖ ML-DSA-65), AES-GCM
                  └─ unwrapped only into memory (UserSession) for the live session
-                      └─ HPKE-unwraps → File Keys (FK, per file)
+                      └─ hybrid-HPKE-unwraps → File Keys (FK, per file)
                                           (FK = non-extractable AES-GCM CryptoKey handle)
 Recovery phrase (user-held BIP39) ──Argon2id──► wrapping key ──► AES-GCM escrow of identity bundle (server-opaque)
-Browser-enrollment keypair (per browser) ──► used to receive the identity bundle when this browser enrolls
+Browser-enrollment keypair (per browser, hybrid X25519+ML-KEM-768 HPKE recipient) ──► receives the identity bundle when this browser enrolls
 ```
 
-- **Public keys** (X25519 + Ed25519) go to the server directory via `PUT /keys`; **private keys never leave the browser** ([server 08 §8.3](https://github.com/Nyxite/NyxiteServer)).
-- Per the system rule ([06 §6.2](06-cryptography.md)): FK wrapping to members and enrollment transport use **HPKE** (public-key targets); the at-rest vault wrap and recovery escrow use **AES-256-GCM** (symmetric keys).
+- **Public keys** (hybrid X25519+ML-KEM-768 and Ed25519+ML-DSA-65) go to the server directory via `PUT /keys`; **private keys never leave the browser** ([server 08 §8.3](https://github.com/Nyxite/NyxiteServer)).
+- Per the system rule ([06 §6.2](06-cryptography.md)): FK wrapping to members and enrollment transport use **(hybrid) HPKE** (public-key targets); the at-rest vault wrap and recovery escrow use **AES-256-GCM** (symmetric keys, unchanged — no PQC dimension).
+- **Post-quantum hybrid at v1.0.0.** The identity keypair, browser-enrollment keypair, and all signatures are **hybrid classical + PQC** (X25519+ML-KEM-768 for HPKE/agreement, Ed25519+ML-DSA-65 for signing, NIST level 3, [06 §6.2](06-cryptography.md)). The PQC halves need a **WASM PQC library** ([06 §6.13](06-cryptography.md)); the recovery Argon2id path is symmetric and **un-peppered/unchanged**.
 
 ## 7.2 First sign-in (brand-new account)
 
 1. User authenticates with native auth (password+TOTP or a passkey; or the enterprise Keycloak OIDC + PKCE option) → the server's access token ([14](14-authentication.md)).
-2. App checks the directory (`GET /keys/directory?userId=me`). If the user has **no identity keypair**, generate **X25519 + Ed25519** (libsodium, in the worker), then **publish the public keys** via `PUT /keys` (signed directory entry, [06 §6.10](06-cryptography.md)).
+2. App checks the directory (`GET /keys/directory?userId=me`). If the user has **no identity keypair**, generate the **hybrid keypair** — X25519+ML-KEM-768 (HPKE) and Ed25519+ML-DSA-65 (signing) — with libsodium for the classical halves + the WASM PQC lib for the PQC halves, in the worker ([06 §6.2](06-cryptography.md)), then **publish the public keys** via `PUT /keys` (signed directory entry, [06 §6.10](06-cryptography.md)).
 3. Create the **vault key** and store the wrapped identity bundle ([§7.3](#73-keyvault-design-p)).
 4. Generate the **recovery key** and escrow ([§7.6](#76-recovery-flow)). The user is **forced through the recovery-key flow before setup completes**.
 5. **Enroll this browser** as a device ([§7.5](#75-browser-enrollment)).
 
 ## 7.3 KeyVault design **[P]**
 
-**The central web tension.** libsodium needs the **raw private-key bytes** to do X25519/Ed25519 ([06 §6.13](06-cryptography.md)), so the identity bundle **cannot** be a non-extractable WebCrypto key — unlike on Android there is no hardware keystore to hold it. FK content keys are different: they are only ever used for AES-GCM, so they *can* be non-extractable `CryptoKey` handles ([06 §6.7](06-cryptography.md)).
+**The central web tension.** libsodium (and the WASM PQC lib) need the **raw private-key bytes** to do X25519/Ed25519 and ML-KEM-768/ML-DSA-65 ([06 §6.13](06-cryptography.md)), so the identity bundle **cannot** be a non-extractable WebCrypto key — unlike on Android there is no hardware keystore to hold it. FK content keys are different: they are only ever used for AES-GCM, so they *can* be non-extractable `CryptoKey` handles ([06 §6.7](06-cryptography.md)).
 
 **Resolution:**
 
 | Material | At rest | In session |
 |----------|---------|------------|
-| **Identity bundle** (X25519 priv ‖ Ed25519 priv) | AES-256-GCM **wrapped under the vault key**, stored as a blob in IndexedDB | unwrapped to raw bytes held **only in memory** in `UserSession`, passed to the worker for libsodium ops; `.fill(0)` on drop |
+| **Identity bundle** (hybrid privs: X25519 ‖ ML-KEM-768 ‖ Ed25519 ‖ ML-DSA-65) | AES-256-GCM **wrapped under the vault key**, stored as a blob in IndexedDB | unwrapped to raw bytes held **only in memory** in `UserSession`, passed to the worker for libsodium / WASM-PQC ops; `.fill(0)` on drop |
 | **Vault key** | **non-extractable WebCrypto AES-GCM `CryptoKey`** stored in IndexedDB (structured-clone of the handle) | used to unwrap the bundle once per unlock; never exportable |
 | **FK handles** | not persisted unwrapped (wrapped form cached) | **non-extractable AES-GCM `CryptoKey`** in the worker, short-lived ([06 §6.7](06-cryptography.md)) |
 
@@ -61,7 +62,7 @@ This is best-effort: an unlocked, compromised tab can still be abused while open
 A **browser profile counts as a device** ([00 §0.8](00-overview.md)). A browser that has the account token but **not** the identity private key cannot decrypt content; the UI shows a clear **"enroll this browser"** state. Two paths:
 
 ### (A) Device-to-device approval
-1. New browser generates a **browser-enrollment X25519 keypair** and registers: `POST /devices { label, pubkey }` → `{ deviceId, status:"pending", pairingCode, qrPayload }`.
+1. New browser generates a **browser-enrollment hybrid X25519+ML-KEM-768 keypair** (HPKE recipient) and registers: `POST /devices { label, pubkey }` → `{ deviceId, status:"pending", pairingCode, qrPayload }`.
 2. It displays the **QR (primary) + 6–8 digit numeric code (fallback)**.
 3. An **already-enrolled** device/browser approves after explicit confirmation: `POST /devices/{id}/approve { wrappedIdentityKey }`, where `wrappedIdentityKey = HPKE-seal(identity bundle → newBrowserPubkey)` ([06 §6.5](06-cryptography.md)). The server relays the opaque blob in `pending_key_blob`.
 4. The new browser fetches it **once**: `GET /devices/me/enrollment` → `{ wrappedIdentityKey }` (**single-use**; the server clears the blob and marks the device `active`), and **unwraps with its enrollment private key**, then wraps the bundle under a fresh local vault key ([§7.3](#73-keyvault-design-p)).
@@ -109,19 +110,19 @@ The app is multi-account from v1.0.0 ([01 §1.8](01-architecture.md), [14 §14.7
 
 ## 7.11 Group keys (enterprise/family groups) **[P]**
 
-Groups add a **group keypair** between a member's identity key and file DEKs ([06 §6.14](06-cryptography.md), [13 §13.9](13-sharing.md), [features/groups.md](https://github.com/Nyxite/Nyxite)). The web client handles group keygen, transparency-verified enrollment, grant unwrapping, scope-scoped rotation, and recovery — all in the worker, under build step **P4.4-WEB-1**. It **requires key transparency (Phase 4.3)**: unlike per-file account shares (which trust TLS + Ed25519 self-signature, [§7.5](#75-browser-enrollment), [13 §13.5](13-sharing.md)), one substituted key at group enrollment exposes the **whole group's corpus**, so enrollment wraps **only** to transparency-log-verified public keys.
+Groups add a **group keypair** between a member's identity key and file DEKs ([06 §6.14](06-cryptography.md), [13 §13.9](13-sharing.md), [features/groups.md](https://github.com/Nyxite/Nyxite)). The web client handles group keygen, transparency-verified enrollment, grant unwrapping, scope-scoped rotation, and recovery — all in the worker, under build step **P4.4-WEB-1**. It **requires key transparency (Phase 4.3)**: unlike per-file account shares (which trust TLS + the hybrid Ed25519+ML-DSA-65 self-signature, [§7.5](#75-browser-enrollment), [13 §13.5](13-sharing.md)), one substituted key at group enrollment exposes the **whole group's corpus**, so enrollment wraps **only** to transparency-log-verified public keys.
 
 Extended hierarchy (adds one wrapped layer to [§7.1](#71-key-hierarchy-web-client-view)):
 
 ```
-Identity bundle (X25519 priv ‖ Ed25519 priv), in memory
-   └─ HPKE-unwraps → Group private key (per group, per scope)   ← from a group-key grant
-                        └─ HPKE-unwraps → File Keys (FK/DEK) wrapped to the group
+Identity bundle (hybrid privs: X25519 ‖ ML-KEM-768 ‖ Ed25519 ‖ ML-DSA-65), in memory
+   └─ hybrid-HPKE-unwraps → Group private key (per group, per scope)   ← from a group-key grant
+                        └─ hybrid-HPKE-unwraps → File Keys (FK/DEK) wrapped to the group
 ```
 
 ### 7.11.1 Group creation (keygen)
 
-The creator's browser calls `CryptoEngine.generateGroupKeypair()` ([06 §6.14](06-cryptography.md)) → **X25519 + Ed25519** in the worker; publishes the **public** halves (`POST /groups { group_pubkey, ed25519_pubkey, scope_kind, max_members? }`, signed), and immediately writes itself a **group-key grant** (wrap the group private key under its own identity public key). Private halves stay in the worker; the server holds public material + opaque grants only.
+The creator's browser calls `CryptoEngine.generateGroupKeypair()` ([06 §6.14](06-cryptography.md)) → hybrid **X25519+ML-KEM-768 + Ed25519+ML-DSA-65** in the worker; publishes the **public** halves (`POST /groups { group_pubkey, ed25519_pubkey, scope_kind, max_members? }`, signed), and immediately writes itself a **group-key grant** (wrap the group private key under its own identity public key). Private halves stay in the worker; the server holds public material + opaque grants only.
 
 ### 7.11.2 Enrollment (transparency-verified, O(1) per member)
 

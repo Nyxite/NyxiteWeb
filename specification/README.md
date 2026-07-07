@@ -22,7 +22,7 @@ Of the three clients the browser is the **most constrained**: it cannot hold the
 | Text CRDT engine | **Yjs** — the reference Yrs-family implementation; lowest-risk binding of the three clients | [02](02-tech-stack-and-libraries.md), [09](09-realtime-collaboration.md) |
 | Multi-account | **Yes, from v1.0.0** — per-account isolated in-browser store, keys, and index; per-account instance host | [07](07-key-and-device-management.md), [14](14-authentication.md), [04](04-local-data-model.md) |
 | Key storage & lock | **Non-extractable WebCrypto vault key** wraps the identity bundle; unlock via **WebAuthn passkey, else passphrase**; idle auto-lock; **persistent by default** | [07 §7.3–7.4](07-key-and-device-management.md), [17](17-security.md), [19 §19.1](19-open-questions.md) |
-| Curve25519 library | **libsodium-wrappers-sumo (WASM)** for X25519/Ed25519 (consistent across browsers) | [02 §2.6](02-tech-stack-and-libraries.md), [06](06-cryptography.md), [19 §19.3](19-open-questions.md) |
+| Asymmetric crypto (hybrid PQC) | **libsodium-wrappers-sumo (WASM)** for classical X25519/Ed25519 **+ a WASM PQC lib** for ML-KEM-768/ML-DSA-65 — hybrid at v1.0.0 (NIST level 3) | [02 §2.6](02-tech-stack-and-libraries.md), [06 §6.2](06-cryptography.md), [19 §19.3](19-open-questions.md) |
 | Search scope | **MiniSearch over the local subset**; titles for all known files; body index → **title-only fallback** over quota | [11](11-search.md), [19 §19.5](19-open-questions.md) |
 | Multi-tab | **Single leader tab** (Web Locks + BroadcastChannel); one relay socket | [09 §9.10](09-realtime-collaboration.md), [19 §19.8](19-open-questions.md) |
 | Guest data | **In-memory only** — fragment key + content never persisted | [13](13-sharing.md), [17](17-security.md), [19 §19.4](19-open-questions.md) |
@@ -46,7 +46,7 @@ All web-specific open questions are now **ratified** — see [19-open-questions.
 | 03 | [project-structure.md](03-project-structure.md) | Next.js App Router layout, module/package graph, naming |
 | 04 | [local-data-model.md](04-local-data-model.md) | IndexedDB schema, in-memory session state, sync state, search index |
 | 05 | [api-client.md](05-api-client.md) | REST client, DTO mapping, error/retry, idempotency, TLS |
-| 06 | [cryptography.md](06-cryptography.md) | AEAD, HPKE, Ed25519/X25519, BLAKE3, Argon2id, framing, WebCrypto/WASM mapping |
+| 06 | [cryptography.md](06-cryptography.md) | AEAD, hybrid HPKE (X25519+ML-KEM-768), hybrid signatures (Ed25519+ML-DSA-65), BLAKE3, Argon2id, framing, WebCrypto/WASM mapping |
 | 07 | [key-and-device-management.md](07-key-and-device-management.md) | Identity keypair, device enrollment, recovery key, in-browser key storage |
 | 08 | [sync-engine.md](08-sync-engine.md) | Manifest/delta sync, policies, CRDT/LWW split, background sync |
 | 09 | [realtime-collaboration.md](09-realtime-collaboration.md) | SignalR relay, Yjs merge, awareness, guests, snapshots |
