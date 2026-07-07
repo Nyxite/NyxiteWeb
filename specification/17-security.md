@@ -1,10 +1,10 @@
 # 17 — Security (Browser-Side)
 
-The server-side model is [server 13](https://github.com/Nyxite/server) (zero-knowledge: DB/blob theft, malicious operator, curious admin all yield no readable content). This document covers the **browser-side** threats the web client must defend. The browser is a **more hostile environment than a native app**: it runs untrusted page context, hosts extensions, may be a shared/public machine, has no platform keystore, and carries the unique fragment-key-in-URL exposure. This mirrors the Android device-side model ([android 17](https://github.com/Nyxite/android)) but recentres it on the web threats.
+The server-side model is [server 13](https://github.com/Nyxite/NyxiteServer) (zero-knowledge: DB/blob theft, malicious operator, curious admin all yield no readable content). This document covers the **browser-side** threats the web client must defend. The browser is a **more hostile environment than a native app**: it runs untrusted page context, hosts extensions, may be a shared/public machine, has no platform keystore, and carries the unique fragment-key-in-URL exposure. This mirrors the Android device-side model ([android 17](https://github.com/Nyxite/NyxiteAndroid)) but recentres it on the web threats.
 
 ## 17.1 Posture recap
 
-- **Zero-knowledge / full E2EE**: plaintext and keys exist only in the browser; the server sees ciphertext, opaque IDs, the structure graph, ACL grants, wrapped-key blobs, sizes, and timestamps ([server 13 §13.1](https://github.com/Nyxite/server)).
+- **Zero-knowledge / full E2EE**: plaintext and keys exist only in the browser; the server sees ciphertext, opaque IDs, the structure graph, ACL grants, wrapped-key blobs, sizes, and timestamps ([server 13 §13.1](https://github.com/Nyxite/NyxiteServer)).
 - **The cardinal crypto boundary** ([01 §1.2](01-architecture.md)): exactly one place (`CryptoEngine`, in a Web Worker) turns plaintext ↔ ciphertext; network clients handle only opaque bytes and structural JSON, enforced by an ESLint boundary rule.
 
 ## 17.2 Threat model
@@ -42,7 +42,7 @@ Cached plaintext (the local subset, [16](16-offline-and-pwa.md)) and wrapped key
 
 ## 17.5 Fragment-key handling
 
-The share-link file key arrives in `location.hash` ([13](13-sharing.md), [server 09 §9.4](https://github.com/Nyxite/server)):
+The share-link file key arrives in `location.hash` ([13](13-sharing.md), [server 09 §9.4](https://github.com/Nyxite/NyxiteServer)):
 
 - **Capture to memory on first paint**, then **`history.replaceState`** to strip `#k=…` from the visible URL/history entry.
 - Serve the app with **`Referrer-Policy: no-referrer`** so the fragment never leaks via `Referer`.
@@ -52,7 +52,7 @@ The share-link file key arrives in `location.hash` ([13](13-sharing.md), [server
 ## 17.6 Token handling
 
 - **Access token in memory only** (a module-scoped variable inside the session), never `localStorage`/`sessionStorage` ([14](14-authentication.md)).
-- **Cautious refresh** of the server's access token (native refresh-token grant, or oidc-client-ts silent refresh under the enterprise Keycloak option); the relay socket ticket and guest share-session token are short-lived ([server 13 §13.4](https://github.com/Nyxite/server)).
+- **Cautious refresh** of the server's access token (native refresh-token grant, or oidc-client-ts silent refresh under the enterprise Keycloak option); the relay socket ticket and guest share-session token are short-lived ([server 13 §13.4](https://github.com/Nyxite/NyxiteServer)).
 - **Never** place tokens, keys, or fragments in `localStorage`/`sessionStorage`/URL/telemetry. **Logout** clears the in-memory session and tears down the `UserSession`.
 
 ## 17.7 Service worker
@@ -72,5 +72,5 @@ A scrubbing `Logger` facade ([02 §2.11](02-tech-stack-and-libraries.md)): never
 - **Secure-context requirement**: WebCrypto, service workers, and clipboard require HTTPS/`localhost`; the unsupported-browser screen blocks insecure contexts ([15 §15.9](15-ui-and-navigation.md), [00 §0.6](00-overview.md)).
 - **Cannot prevent screenshots / screen capture** in a browser — there is no `FLAG_SECURE` equivalent; this is a documented limitation.
 - **Zeroization is best-effort** in JS: garbage collection and immutable strings mean key bytes can't be reliably wiped; prefer non-extractable `CryptoKey` handles (never materialized as JS bytes) and drop references on lock to minimize exposure.
-- **Rate-limit cooperation**: honor server `429 rate_limited` + `Retry-After` ([05](05-api-client.md), [server 13 §13.5](https://github.com/Nyxite/server)); don't hammer auth/key-directory/share endpoints.
+- **Rate-limit cooperation**: honor server `429 rate_limited` + `Retry-After` ([05](05-api-client.md), [server 13 §13.5](https://github.com/Nyxite/NyxiteServer)); don't hammer auth/key-directory/share endpoints.
 - **Dependency / supply chain**: every dep runs with full access to plaintext and keys — pinned lockfile + integrity hashes, no remote-code-loading deps, dependency audit and supply-chain scan in CI ([02 §2.12](02-tech-stack-and-libraries.md), [18](18-build-ci-testing.md)).

@@ -1,6 +1,6 @@
 # 18 — Build, CI & Testing
 
-The web client ships as a **static bundle** with **no server runtime** ([00 §0.5](00-overview.md), [01 §1.1](01-architecture.md)), so "build" means *static export + service-worker generation + WASM bundling*, and "deploy" means *publish immutable assets to a CDN/static host*. Because the browser is a **full cryptographic peer** ([00 §0.2](00-overview.md)), the non-negotiable gate is **conformance** — the same crypto and CRDT bytes as server, desktop, and Android ([§18.6](#186-conformance-vectors-the-critical-gate)). This doc mirrors the Android build/test spec ([android 18](https://github.com/Nyxite/android)) for the browser.
+The web client ships as a **static bundle** with **no server runtime** ([00 §0.5](00-overview.md), [01 §1.1](01-architecture.md)), so "build" means *static export + service-worker generation + WASM bundling*, and "deploy" means *publish immutable assets to a CDN/static host*. Because the browser is a **full cryptographic peer** ([00 §0.2](00-overview.md)), the non-negotiable gate is **conformance** — the same crypto and CRDT bytes as server, desktop, and Android ([§18.6](#186-conformance-vectors-the-critical-gate)). This doc mirrors the Android build/test spec ([android 18](https://github.com/Nyxite/NyxiteAndroid)) for the browser.
 
 ## 18.1 Build setup
 
@@ -36,7 +36,7 @@ CI fails on a budget breach (`size-limit` or the bundler analyzer with threshold
 - **Static host / CDN.** The `out/` bundle is published as immutable assets through **NyxiteDeploy** (the shared deploy repo) to a static host/CDN. There is no app server; the same bundle a self-hoster downloads is the one we ship.
 - **Instance-agnostic bundle + runtime `config.json`.** The API base (`/api/v1`), relay hub URL, public-share base, and (for the enterprise Keycloak option) the OIDC authority are **not baked into the build** — they are fetched at runtime from a small `config.json` at app boot, with per-account override for multi-instance ([00 §0.5](00-overview.md), [01 §1.8](01-architecture.md), [14](14-authentication.md)). A self-hoster serves the identical static bundle pointed at their instance by editing only `config.json`. CI builds **once**; deployment is config, not a rebuild.
 - **HTTPS + headers.** Served only over HTTPS (secure context required for WebCrypto/SW — [00 §0.6](00-overview.md)). The host/CDN must emit the **CSP and security headers from [17](17-security.md)** (script-src self, `connect-src` limited to the configured instance API + relay, plus the OIDC authority under the enterprise Keycloak option, `frame-ancestors 'none'`, COOP/COEP as needed for worker isolation). Header config travels with the deploy, not the bundle.
-- **Cloudflare note.** Cloudflare may front public traffic (matching the server's edge, [server 14 §14.6](https://github.com/Nyxite/server)); ensure it does **not** rewrite/strip the CSP or the URL **fragment** (the fragment never reaches any server, but proxies must not interfere with client-side routing of `/share/...`). Disable any "auto-minify"/script-injection that would violate SRI/CSP.
+- **Cloudflare note.** Cloudflare may front public traffic (matching the server's edge, [server 14 §14.6](https://github.com/Nyxite/NyxiteServer)); ensure it does **not** rewrite/strip the CSP or the URL **fragment** (the fragment never reaches any server, but proxies must not interfere with client-side routing of `/share/...`). Disable any "auto-minify"/script-injection that would violate SRI/CSP.
 - **Cache strategy.** Hashed assets → `Cache-Control: immutable, max-age=1y`. `index.html`/entry shells and `config.json` → `no-cache` (must revalidate) so a deploy is picked up.
 
 ### PWA versioning & SW update
@@ -49,7 +49,7 @@ CI fails on a budget breach (`size-limit` or the bundler analyzer with threshold
 
 - **`tsc --noEmit`** (strict) — type gate.
 - **ESLint** + **Prettier** — style/lint gate.
-- **`eslint-plugin-boundaries`** enforces the layering and the **crypto boundary** ([01 §1.2](01-architecture.md)): network modules (`ApiClient`, `RelayClient`) must not import `CryptoEngine` or any domain content type; a type carrying a plaintext field must not reach a network client; presentation must not import data internals. This is the web analogue of the Android `konsist` architecture test ([android 18 §18.3](https://github.com/Nyxite/android)). A boundary violation **fails CI**.
+- **`eslint-plugin-boundaries`** enforces the layering and the **crypto boundary** ([01 §1.2](01-architecture.md)): network modules (`ApiClient`, `RelayClient`) must not import `CryptoEngine` or any domain content type; a type carrying a plaintext field must not reach a network client; presentation must not import data internals. This is the web analogue of the Android `konsist` architecture test ([android 18 §18.3](https://github.com/Nyxite/NyxiteAndroid)). A boundary violation **fails CI**.
 - Dependency policy lint ([02 §2.12](02-tech-stack-and-libraries.md)): no new dependency that loads remote code or phones home; license check (PolyForm-redistributable).
 
 ## 18.4 Test strategy (critical surfaces first)
@@ -70,7 +70,7 @@ CI fails on a budget breach (`size-limit` or the bundler analyzer with threshold
 
 ## 18.5 End-to-end flows (Playwright)
 
-Run against a test server (Testcontainers-backed server stack or a staging instance, [server 14 §14.8](https://github.com/Nyxite/server)). Required scenarios:
+Run against a test server (Testcontainers-backed server stack or a staging instance, [server 14 §14.8](https://github.com/Nyxite/NyxiteServer)). Required scenarios:
 
 1. **Login** — native auth (password+TOTP, passkey) and the enterprise Keycloak OIDC + PKCE option, token acquisition, silent refresh ([14](14-authentication.md)).
 2. **Enroll + recovery** — browser enrollment, generate recovery (BIP39-24), recover in a second browser context.
@@ -86,7 +86,7 @@ Interop is non-negotiable in a zero-knowledge multi-client system. The build **f
 
 ### Crypto known-answer & cross-client vectors
 
-- Shared vector files (KATs + cross-client pairs) are **co-owned with server/desktop/Android** and checked into the web repo's `core-crypto` test resources, updated in lockstep ([android 18 §18.6](https://github.com/Nyxite/android)).
+- Shared vector files (KATs + cross-client pairs) are **co-owned with server/desktop/Android** and checked into the web repo's `core-crypto` test resources, updated in lockstep ([android 18 §18.6](https://github.com/Nyxite/NyxiteAndroid)).
 - Coverage:
   - **AES-256-GCM framing** — `magic "NYXC" | version 0x01 | key_id | nonce | ciphertext | tag`, AAD = `magic ‖ version ‖ key_id ‖ file_id ‖ object_kind`; decrypt server-produced frames and produce byte-identical frames for fixed inputs ([06 §6.3](06-cryptography.md)).
   - **HPKE wrap/unwrap interop** — DHKEM(X25519,HKDF-SHA256)/HKDF-SHA256/AES-256-GCM (`KEM 0x0020`/`KDF 0x0001`/`AEAD 0x0002`); browser wraps an FK → server/desktop/Android unwrap, and vice-versa ([06 §6.4](06-cryptography.md)).

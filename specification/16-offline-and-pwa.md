@@ -1,6 +1,6 @@
 # 16 — Offline & PWA
 
-The web client is a **full installable PWA** ([00 §0.5](00-overview.md)). With the service worker installed and the local subset cached, the user can browse, read, edit, draw, and search the cached subset with no connectivity; changes queue in the outbox and flush on reconnect ([08](08-sync-engine.md)). As on Android, local storage is **a set of per-file local copies the user controls** ([android 16](https://github.com/Nyxite/android)) — but here it is bounded by browser Storage-API quota and eviction, and everything is gated by the at-rest model in [17](17-security.md). **The service worker never decrypts content or holds keys** ([17 §17.7](17-security.md)).
+The web client is a **full installable PWA** ([00 §0.5](00-overview.md)). With the service worker installed and the local subset cached, the user can browse, read, edit, draw, and search the cached subset with no connectivity; changes queue in the outbox and flush on reconnect ([08](08-sync-engine.md)). As on Android, local storage is **a set of per-file local copies the user controls** ([android 16](https://github.com/Nyxite/NyxiteAndroid)) — but here it is bounded by browser Storage-API quota and eviction, and everything is gated by the at-rest model in [17](17-security.md). **The service worker never decrypts content or holds keys** ([17 §17.7](17-security.md)).
 
 ## 16.1 Web App Manifest
 
@@ -71,4 +71,4 @@ Surfaces ([15 §15.4](15-ui-and-navigation.md)):
 ## 16.8 Export **[P]**
 
 - **Single-file export**: the user may explicitly trigger a **browser download** of one **decrypted** file (e.g. the markdown source or a rendered note) for portability — a deliberate, per-item action.
-- **No automatic bulk plaintext export to disk**: the client never writes a general plaintext working copy or dumps the corpus to the filesystem (privacy; keeps content inside the encrypted boundary). **Bulk export remains a desktop feature**, consistent with Android ([android 16](https://github.com/Nyxite/android)).
+- **No automatic bulk plaintext export to disk**: the client never writes a general plaintext working copy or dumps the corpus to the filesystem (privacy; keeps content inside the encrypted boundary). **Bulk export remains a desktop feature**, consistent with Android ([android 16](https://github.com/Nyxite/NyxiteAndroid)).

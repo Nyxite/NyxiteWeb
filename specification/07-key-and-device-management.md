@@ -1,6 +1,6 @@
 # 07 — Key & Device Management
 
-Covers the identity keypair, treating a **browser as a device**, in-browser key storage, the recovery key, the lock model, and FK/identity rotation. This is the Phase-0 foundation ([00 §0.9](00-overview.md)); nothing later retrofits it. It mirrors [server 07](https://github.com/Nyxite/server)/[08](https://github.com/Nyxite/server) and the sibling [android 07](https://github.com/Nyxite/android), adapted to the browser's lack of a hardware keystore. Crypto primitives live in [06-cryptography.md](06-cryptography.md); at-rest threat detail is in [17-security.md](17-security.md).
+Covers the identity keypair, treating a **browser as a device**, in-browser key storage, the recovery key, the lock model, and FK/identity rotation. This is the Phase-0 foundation ([00 §0.9](00-overview.md)); nothing later retrofits it. It mirrors [server 07](https://github.com/Nyxite/NyxiteServer)/[08](https://github.com/Nyxite/NyxiteServer) and the sibling [android 07](https://github.com/Nyxite/NyxiteAndroid), adapted to the browser's lack of a hardware keystore. Crypto primitives live in [06-cryptography.md](06-cryptography.md); at-rest threat detail is in [17-security.md](17-security.md).
 
 ## 7.1 Key hierarchy (web client view)
 
@@ -14,7 +14,7 @@ Recovery phrase (user-held BIP39) ──Argon2id──► wrapping key ──►
 Browser-enrollment keypair (per browser) ──► used to receive the identity bundle when this browser enrolls
 ```
 
-- **Public keys** (X25519 + Ed25519) go to the server directory via `PUT /keys`; **private keys never leave the browser** ([server 08 §8.3](https://github.com/Nyxite/server)).
+- **Public keys** (X25519 + Ed25519) go to the server directory via `PUT /keys`; **private keys never leave the browser** ([server 08 §8.3](https://github.com/Nyxite/NyxiteServer)).
 - Per the system rule ([06 §6.2](06-cryptography.md)): FK wrapping to members and enrollment transport use **HPKE** (public-key targets); the at-rest vault wrap and recovery escrow use **AES-256-GCM** (symmetric keys).
 
 ## 7.2 First sign-in (brand-new account)

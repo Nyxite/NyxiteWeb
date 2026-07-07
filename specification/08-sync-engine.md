@@ -1,6 +1,6 @@
 # 08 — Sync Engine
 
-Reconciles this browser's local state ([04](04-local-data-model.md)) with the server for every readable file, honoring per-file policy and the right model per content type — **all over ciphertext** ([server 06](https://github.com/Nyxite/server)). The server moves bytes, sequences encrypted updates, and tracks versions/policies; the browser does all crypto and merge. The web client is the **most constrained peer** ([00 §0.3](00-overview.md)): it holds structure/manifests for everything readable but caches and indexes only its **local subset**, so the sync engine is built around *lazy, on-demand* fetch with an opt-in proactive tier.
+Reconciles this browser's local state ([04](04-local-data-model.md)) with the server for every readable file, honoring per-file policy and the right model per content type — **all over ciphertext** ([server 06](https://github.com/Nyxite/NyxiteServer)). The server moves bytes, sequences encrypted updates, and tracks versions/policies; the browser does all crypto and merge. The web client is the **most constrained peer** ([00 §0.3](00-overview.md)): it holds structure/manifests for everything readable but caches and indexes only its **local subset**, so the sync engine is built around *lazy, on-demand* fetch with an opt-in proactive tier.
 
 The engine is the `SyncRepository` implementation in the data layer, orchestrating `LocalStore`, `ApiClient`, `RelayClient`, `CrdtEngine`, `CryptoEngine` and `BlobCache` ([01 §1.5](01-architecture.md)). Plaintext never reaches `ApiClient`; every outbound content payload passes `CryptoEngine.seal(...)`, every inbound one `CryptoEngine.open(...)` ([01 §1.2](01-architecture.md)).
 
@@ -12,7 +12,7 @@ The engine is the `SyncRepository` implementation in the data layer, orchestrati
 | `ink` | 3 | **LWW / version-vector** | `PUT/GET /files/{id}/blob` (encrypted blob) |
 | `office`, `image`, `binary` | 5 | **LWW / version-vector** | encrypted blob, chunked for large |
 
-`contentType` is immutable after creation and selects the decoder/editor ([10](10-editors.md)) and the sync path. CRDT-vs-LWW assignment is pinned to the server ([server 06 §6.1](https://github.com/Nyxite/server)).
+`contentType` is immutable after creation and selects the decoder/editor ([10](10-editors.md)) and the sync path. CRDT-vs-LWW assignment is pinned to the server ([server 06 §6.1](https://github.com/Nyxite/NyxiteServer)).
 
 ## 8.2 Sync policies
 

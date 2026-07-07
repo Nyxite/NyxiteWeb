@@ -2,7 +2,7 @@
 
 This folder is the detailed, implementation-level specification for the **Nyxite Web client** — the Next.js + React + shadcn/ui application that lets a user read, write, hand-draw, organize, sync, collaborate on, share, and search end-to-end-encrypted notes and documents **from a browser**, and is the **primary surface for anonymous guest access** via share links.
 
-It expands the architectural planning documents in the central [`Nyxite`](https://github.com/Nyxite/Nyxite) repository and the [`server` specification](https://github.com/Nyxite/server) into a concrete client build specification covering the full v1.0.0 product across all roadmap phases. It is the web counterpart to the [`android` specification](https://github.com/Nyxite/android).
+It expands the architectural planning documents in the central [`Nyxite`](https://github.com/Nyxite/Nyxite) repository and the [`server` specification](https://github.com/Nyxite/NyxiteServer) into a concrete client build specification covering the full v1.0.0 product across all roadmap phases. It is the web counterpart to the [`android` specification](https://github.com/Nyxite/NyxiteAndroid).
 
 It is written to be **self-contained enough to build the app from**: it names the libraries, the module graph, the in-browser data stores, the API/relay calls, the crypto primitives and how they map to **WebCrypto / WASM** libraries, the editor and sync internals, the UI surface, and the build/test/CI setup.
 

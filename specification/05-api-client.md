@@ -1,6 +1,6 @@
 # 05 — REST API Client
 
-`ApiClient` implements the server REST surface ([server 04](https://github.com/Nyxite/server)) under `src/data/api` ([03 §3.1](03-project-structure.md)). It speaks **JSON for structure/metadata** and **binary streams (`Uint8Array`) for ciphertext**, and it has **no reference to `CryptoEngine`** — it can never serialize plaintext ([01 §1.2](01-architecture.md)). Repositories decrypt; `ApiClient` only moves bytes and structural DTOs. It is the web counterpart of the Android Retrofit client ([android 05](https://github.com/Nyxite/android)).
+`ApiClient` implements the server REST surface ([server 04](https://github.com/Nyxite/NyxiteServer)) under `src/data/api` ([03 §3.1](03-project-structure.md)). It speaks **JSON for structure/metadata** and **binary streams (`Uint8Array`) for ciphertext**, and it has **no reference to `CryptoEngine`** — it can never serialize plaintext ([01 §1.2](01-architecture.md)). Repositories decrypt; `ApiClient` only moves bytes and structural DTOs. It is the web counterpart of the Android Retrofit client ([android 05](https://github.com/Nyxite/NyxiteAndroid)).
 
 ## 5.1 Conventions
 
@@ -14,7 +14,7 @@
 
 ## 5.2 Endpoints
 
-Bodies marked *(cipher)* are opaque binary streams; *(json)* are DTOs whose `*Enc` fields are base64 per [§5.1](#51-conventions). Grouped to match the server resource map ([server 04 §4.2](https://github.com/Nyxite/server)).
+Bodies marked *(cipher)* are opaque binary streams; *(json)* are DTOs whose `*Enc` fields are base64 per [§5.1](#51-conventions). Grouped to match the server resource map ([server 04 §4.2](https://github.com/Nyxite/NyxiteServer)).
 
 | Group | Method · Path | Notes |
 |-------|---------------|-------|
@@ -24,7 +24,7 @@ Bodies marked *(cipher)* are opaque binary streams; *(json)* are DTOs whose `*En
 | | `GET /folders/{id}/files` | list |
 | | `POST/GET/PATCH/DELETE /files`, `/files/{id}` *(json)* | `POST` sends client-allocated `id` + `crdtDocId` (text only); `contentType` **immutable** (never PATCHed); `PATCH` = `nameEnc`/`syncPolicy`/`parentFolderId`/`metadataEnc` only |
 | **Content** | `GET /files/{id}/blob` *(cipher)* | `If-None-Match: <contentHash>` → 304 |
-| | `PUT /files/{id}/blob` *(cipher)* | ink/binary LWW; `If-Match: <seq>` (parent seq, [server 06 §6.5](https://github.com/Nyxite/server)) |
+| | `PUT /files/{id}/blob` *(cipher)* | ink/binary LWW; `If-Match: <seq>` (parent seq, [server 06 §6.5](https://github.com/Nyxite/NyxiteServer)) |
 | | `GET /files/{id}/crdt/log?since={seq}` *(cipher)* | encrypted updates — REST fallback for relay |
 | | `POST /files/{id}/crdt/log` *(cipher)* | submit encrypted update(s) — REST fallback |
 | | `GET /files/{id}/snapshot` *(cipher)* | latest encrypted snapshot pointer/stream |
@@ -146,7 +146,7 @@ Every decoded JSON DTO is validated with a **zod** schema at the `ApiClient` edg
 
 ## 5.8 What the client enforces locally (server can't)
 
-Because the server validates only structure/ACL/write-once and **cannot read plaintext** ([server 04 §4.7](https://github.com/Nyxite/server)):
+Because the server validates only structure/ACL/write-once and **cannot read plaintext** ([server 04 §4.7](https://github.com/Nyxite/NyxiteServer)):
 
 - Compute the **BLAKE3 content address honestly** and verify downloaded ciphertext decrypts and matches its claimed address before trusting it.
 - Don't rely on the server to validate CRDT updates — malformed updates simply fail to apply locally ([09](09-realtime-collaboration.md)).

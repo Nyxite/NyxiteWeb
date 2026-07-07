@@ -1,6 +1,6 @@
 # 19 — Open Questions & Resolutions (Web)
 
-Every web-specific open item is now **ratified** (this revision). Each entry below records the **decision**, **how to validate it (spike)**, and the **pre-planned fallback** if the spike fails — so implementation can proceed while the validations run. Items that are genuinely the **server's** to decide remain "track & confirm" ([§19.6](#196-server-owned-protocol-items-track--confirm)). Project-wide decisions stay canonical in the master [`docs/OPEN-DECISIONS.md`](https://github.com/Nyxite/Nyxite); this file folds into that tracker's Web section. Where an item parallels the Android client it stays aligned ([android 19](https://github.com/Nyxite/android)).
+Every web-specific open item is now **ratified** (this revision). Each entry below records the **decision**, **how to validate it (spike)**, and the **pre-planned fallback** if the spike fails — so implementation can proceed while the validations run. Items that are genuinely the **server's** to decide remain "track & confirm" ([§19.6](#196-server-owned-protocol-items-track--confirm)). Project-wide decisions stay canonical in the master [`docs/OPEN-DECISIONS.md`](https://github.com/Nyxite/Nyxite); this file folds into that tracker's Web section. Where an item parallels the Android client it stays aligned ([android 19](https://github.com/Nyxite/NyxiteAndroid)).
 
 ## 19.0 Decisions ratified
 

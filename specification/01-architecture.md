@@ -4,7 +4,7 @@
 
 The app is a **static-export SPA** ([00 §0.5](00-overview.md)): a CDN serves immutable assets; **all logic runs in the browser**. It is **offline-capable** — the in-browser store (IndexedDB) is the source of truth the UI renders from, and the network is a background reconciler. With the service worker installed and the local subset cached, the user can read, edit, draw, organize, and search the cached subset with no connectivity; changes queue and sync when the relay/REST is reachable.
 
-It follows a **layered (Clean-ish) architecture** with **unidirectional data flow** in the presentation layer, mirroring the Android client's discipline ([android 01](https://github.com/Nyxite/android)) and the server's separation of `Domain`/`Contracts`/`Crypto` from host concerns:
+It follows a **layered (Clean-ish) architecture** with **unidirectional data flow** in the presentation layer, mirroring the Android client's discipline ([android 01](https://github.com/Nyxite/NyxiteAndroid)) and the server's separation of `Domain`/`Contracts`/`Crypto` from host concerns:
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -41,7 +41,7 @@ There is exactly one place where plaintext becomes ciphertext and vice-versa: th
 - `ApiClient` and `RelayClient` accept and return **opaque `Uint8Array` / framed blobs and structural JSON only** — they have no method that takes a domain content object and **no reference to `CryptoEngine`**. They cannot serialize plaintext by accident.
 - Repositories are the only components that hold both a `CryptoEngine` and a network client. Every outbound content payload passes through `CryptoEngine.seal(...)`; every inbound one through `CryptoEngine.open(...)`.
 - The in-browser store may hold decrypted content for the cached subset; it is gated by the account session and the [17-security.md](17-security.md) at-rest model. Decrypted plaintext and unwrapped keys are **never** placed in `localStorage`/`sessionStorage`, URL, or any telemetry.
-- An **ESLint boundary rule** (`eslint-plugin-boundaries`, [18](18-build-ci-testing.md)) fails the build if a network module imports the crypto/domain-content types, or if a type carrying a plaintext field reaches a network client. This is the web analogue of the Android `konsist` architecture test ([android 01 §1.2](https://github.com/Nyxite/android)).
+- An **ESLint boundary rule** (`eslint-plugin-boundaries`, [18](18-build-ci-testing.md)) fails the build if a network module imports the crypto/domain-content types, or if a type carrying a plaintext field reaches a network client. This is the web analogue of the Android `konsist` architecture test ([android 01 §1.2](https://github.com/Nyxite/NyxiteAndroid)).
 
 ## 1.3 Presentation: unidirectional data flow
 

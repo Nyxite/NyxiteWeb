@@ -1,6 +1,6 @@
 # 20 — Roadmap (Web)
 
-Phase order mirrors the server ([server 15](https://github.com/Nyxite/server)) and the Android client ([android 20](https://github.com/Nyxite/android)) so all clients and the backend land each capability together. v1.0.0 is the complete E2EE web client (Phases 0–6); phases are **build order, not separate products**. **E2EE is foundational from Phase 0** and never retrofitted ([00 §0.4](00-overview.md)). The phase map is summarized in [00 §0.9](00-overview.md).
+Phase order mirrors the server ([server 15](https://github.com/Nyxite/NyxiteServer)) and the Android client ([android 20](https://github.com/Nyxite/NyxiteAndroid)) so all clients and the backend land each capability together. v1.0.0 is the complete E2EE web client (Phases 0–6); phases are **build order, not separate products**. **E2EE is foundational from Phase 0** and never retrofitted ([00 §0.4](00-overview.md)). The phase map is summarized in [00 §0.9](00-overview.md).
 
 Before Phase 1 logic is committed, run the **early spikes** ([18 §18.8](18-build-ci-testing.md)): crypto/WASM perf, hpke-js suite-id check, in-browser key-storage/lock, SignalR-in-browser, multi-tab coordination, storage persistence.
 

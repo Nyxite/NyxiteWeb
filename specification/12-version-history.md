@@ -1,6 +1,6 @@
 # 12 — Version History
 
-A full history of **encrypted, content-addressed snapshots** the server stores but cannot read. As with every other capability, **diffs and restore run in the browser** because the server can't read either version ([server 10](https://github.com/Nyxite/server)). Diffing large decrypted snapshots is CPU-heavy, so it runs in a worker with bounded memory ([§12.7](#127-web-specifics)).
+A full history of **encrypted, content-addressed snapshots** the server stores but cannot read. As with every other capability, **diffs and restore run in the browser** because the server can't read either version ([server 10](https://github.com/Nyxite/NyxiteServer)). Diffing large decrypted snapshots is CPU-heavy, so it runs in a worker with bounded memory ([§12.7](#127-web-specifics)).
 
 ## 12.1 Model
 

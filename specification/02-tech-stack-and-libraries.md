@@ -54,7 +54,7 @@ Concrete choices with rationale. Versions are **[P]** floors at time of writing;
 
 ## 2.6 Cryptography (must match the server's algorithm table exactly)
 
-All primitives must match the server's ledger ([server 07 §7.3](https://github.com/Nyxite/server); reproduced in [06 §6.2](06-cryptography.md)). Wrap **everything** behind the `CryptoEngine` interface so a library can be swapped without touching repositories.
+All primitives must match the server's ledger ([server 07 §7.3](https://github.com/Nyxite/NyxiteServer); reproduced in [06 §6.2](06-cryptography.md)). Wrap **everything** behind the `CryptoEngine` interface so a library can be swapped without touching repositories.
 
 | Purpose | Library | Notes |
 |---------|---------|-------|

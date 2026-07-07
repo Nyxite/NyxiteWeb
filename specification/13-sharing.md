@@ -1,6 +1,6 @@
 # 13 — Sharing & Guest Mode
 
-Sharing has the **same two enforcement layers** everywhere ([server 09](https://github.com/Nyxite/server)), and the browser is a full participant in both:
+Sharing has the **same two enforcement layers** everywhere ([server 09](https://github.com/Nyxite/NyxiteServer)), and the browser is a full participant in both:
 
 1. **Server ACL** — decides who may *fetch ciphertext* or *join the relay*. Enforced server-side at every checkpoint; **revocation here is instant**. The browser only asks; it cannot grant itself reach.
 2. **Cryptographic access** — decides who can *decrypt*, via possession of the file key (FK), delivered either **HPKE-wrapped** to a member's public key or carried in a link's **URL fragment**. The server can neither grant nor read this; all wrap/unwrap happens in the `CryptoEngine` ([06](06-cryptography.md)).
@@ -69,7 +69,7 @@ Effective permission for (principal, resource) = **max** over:
 - **inherited** folder/project grant, and
 - (for guests) the **resolving link's** permission.
 
-The two gates are independent: the **server ACL** uses this maximum to gate ciphertext reach and relay writes, while the **crypto layer** *additionally* requires the right key — having ACL reach without a key yields ciphertext you cannot read, and vice-versa. Admins get **structure/usage only, never content** — no key exists for them and there is no break-glass ([14 §14.5](14-authentication.md), [server 09 §9.5](https://github.com/Nyxite/server)).
+The two gates are independent: the **server ACL** uses this maximum to gate ciphertext reach and relay writes, while the **crypto layer** *additionally* requires the right key — having ACL reach without a key yields ciphertext you cannot read, and vice-versa. Admins get **structure/usage only, never content** — no key exists for them and there is no break-glass ([14 §14.5](14-authentication.md), [server 09 §9.5](https://github.com/Nyxite/NyxiteServer)).
 
 ## 13.5 Managing shares
 
@@ -107,7 +107,7 @@ The link **is** the secret — anyone with the full URL can decrypt. Browser-spe
 
 ## 13.8 Audit
 
-Share creation, permission changes, revocations, and **key rotations** are audited **server-side** with target/actor — **never content or keys** ([server 09 §9.7](https://github.com/Nyxite/server)). Link **access** by guests is auditable by **token hash** (+ IP/UA), never the fragment key. The client surfaces nothing the server could not already log.
+Share creation, permission changes, revocations, and **key rotations** are audited **server-side** with target/actor — **never content or keys** ([server 09 §9.7](https://github.com/Nyxite/NyxiteServer)). Link **access** by guests is auditable by **token hash** (+ IP/UA), never the fragment key. The client surfaces nothing the server could not already log.
 
 ## 13.9 Group sharing (enterprise / family)
 

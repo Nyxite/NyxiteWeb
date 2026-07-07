@@ -1,6 +1,6 @@
 # 09 — Real-time Collaboration
 
-Live multi-user editing of text documents over an **encrypted relay**: the server stores and forwards encrypted CRDT updates but never merges or reads them; **each browser runs the Yjs engine and merges locally** ([server 05](https://github.com/Nyxite/server)). Yjs is the **reference** Yrs-family implementation, so the web binding is the lowest-risk of the three clients ([02 §2.7](02-tech-stack-and-libraries.md)) — but the wire protocol is still conformance-locked against ydotnet (desktop) and yrs/UniFFI (Android) ([§9.12](#912-wire-protocol-conformance-critical), [18](18-build-ci-testing.md)).
+Live multi-user editing of text documents over an **encrypted relay**: the server stores and forwards encrypted CRDT updates but never merges or reads them; **each browser runs the Yjs engine and merges locally** ([server 05](https://github.com/Nyxite/NyxiteServer)). Yjs is the **reference** Yrs-family implementation, so the web binding is the lowest-risk of the three clients ([02 §2.7](02-tech-stack-and-libraries.md)) — but the wire protocol is still conformance-locked against ydotnet (desktop) and yrs/UniFFI (Android) ([§9.12](#912-wire-protocol-conformance-critical), [18](18-build-ci-testing.md)).
 
 ## 9.1 Model
 
@@ -81,7 +81,7 @@ The server cannot compact an encrypted log it can't read, so **the client snapsh
 - **≥ 5 min** of accumulated edits, **OR**
 - the **last participant leaving** the room.
 
-Any participating client may snapshot. The **server prune watermark** (`PruneAfterSnapshotSeq`, with its safety tail) is entirely server-side ([server 05 §5.6](https://github.com/Nyxite/server)); the client only snapshots and uploads. In a browser, snapshot serialization/seal runs in the crypto worker ([01 §1.6](01-architecture.md)) to avoid blocking the editor.
+Any participating client may snapshot. The **server prune watermark** (`PruneAfterSnapshotSeq`, with its safety tail) is entirely server-side ([server 05 §5.6](https://github.com/Nyxite/NyxiteServer)); the client only snapshots and uploads. In a browser, snapshot serialization/seal runs in the crypto worker ([01 §1.6](01-architecture.md)) to avoid blocking the editor.
 
 ## 9.9 Guest sessions (this browser joining a link share)
 

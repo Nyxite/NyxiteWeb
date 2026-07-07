@@ -1,6 +1,6 @@
 # 04 — Local Data Model
 
-The in-browser store (`LocalStore`, Dexie over IndexedDB) is the **offline-first source of truth** the UI renders from ([01 §1.1](01-architecture.md)). It mirrors the server's structure graph, caches decrypted names/metadata and the decrypted **local subset**, tracks per-file sync state, mirrors CRDT/version pointers for offline catch-up, and backs the search index. It is the web analogue of the Android Room schema ([android 04](https://github.com/Nyxite/android)), constrained by the browser being the most limited peer ([00 §0.3](00-overview.md)).
+The in-browser store (`LocalStore`, Dexie over IndexedDB) is the **offline-first source of truth** the UI renders from ([01 §1.1](01-architecture.md)). It mirrors the server's structure graph, caches decrypted names/metadata and the decrypted **local subset**, tracks per-file sync state, mirrors CRDT/version pointers for offline catch-up, and backs the search index. It is the web analogue of the Android Room schema ([android 04](https://github.com/Nyxite/NyxiteAndroid)), constrained by the browser being the most limited peer ([00 §0.3](00-overview.md)).
 
 ## 4.1 Storage engine, DB naming, at-rest reality
 

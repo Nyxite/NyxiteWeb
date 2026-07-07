@@ -1,6 +1,6 @@
 # 15 — UI & Navigation
 
-React 19 + shadcn/ui (Radix primitives) + Tailwind CSS v4, **dark-first** with the Nyxite brand. Routing is the Next.js App Router rendered **fully client-side under static export** ([00 §0.5](00-overview.md), [02 §2.1](02-tech-stack-and-libraries.md)). The web client is responsive (phone → desktop) and is the **primary guest surface**; the ink editor is "view + basic editing", not the showcase ([10](10-editors.md)). This mirrors the Android client's navigation discipline ([android 15](https://github.com/Nyxite/android)).
+React 19 + shadcn/ui (Radix primitives) + Tailwind CSS v4, **dark-first** with the Nyxite brand. Routing is the Next.js App Router rendered **fully client-side under static export** ([00 §0.5](00-overview.md), [02 §2.1](02-tech-stack-and-libraries.md)). The web client is responsive (phone → desktop) and is the **primary guest surface**; the ink editor is "view + basic editing", not the showcase ([10](10-editors.md)). This mirrors the Android client's navigation discipline ([android 15](https://github.com/Nyxite/NyxiteAndroid)).
 
 ## 15.1 Route map (App Router segments, all client-rendered)
 

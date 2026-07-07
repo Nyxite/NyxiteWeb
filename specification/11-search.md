@@ -1,10 +1,10 @@
 # 11 — Search (Client-Side)
 
-The server holds **no index** — under full E2EE it can't read content, so there is **no server search endpoint** at all ([server 11](https://github.com/Nyxite/server)). Search lives where the keys and plaintext live: the browser, over its **local subset**. Of the three clients the web is the **weakest search surface** because a browser cannot hold the whole corpus ([00 §0.3](00-overview.md)); the **desktop** is the full-corpus reference.
+The server holds **no index** — under full E2EE it can't read content, so there is **no server search endpoint** at all ([server 11](https://github.com/Nyxite/NyxiteServer)). Search lives where the keys and plaintext live: the browser, over its **local subset**. Of the three clients the web is the **weakest search surface** because a browser cannot hold the whole corpus ([00 §0.3](00-overview.md)); the **desktop** is the full-corpus reference.
 
 ## 11.1 Why search is client-side
 
-Server-side search would require the server to read plaintext, which is incompatible with zero-knowledge. So the index is built **in the browser** from content the client has already decrypted, kept **in IndexedDB**, account-scoped, and **never uploaded** ([server 11 §11.1](https://github.com/Nyxite/server)). There is no query round-trip: a search never leaves the device.
+Server-side search would require the server to read plaintext, which is incompatible with zero-knowledge. So the index is built **in the browser** from content the client has already decrypted, kept **in IndexedDB**, account-scoped, and **never uploaded** ([server 11 §11.1](https://github.com/Nyxite/NyxiteServer)). There is no query round-trip: a search never leaves the device.
 
 ## 11.2 Per-surface scope
 
@@ -22,7 +22,7 @@ The server exposes **no search endpoint** (the former `GET /api/v1/search` is re
 - **Sync manifests** (`GET /sync/manifest`, [08](08-sync-engine.md)) — file ids, content-types, versions, hashes, policies — so the client knows what exists and what to fetch.
 - **Ciphertext** (`/files/{id}/blob`, snapshots, CRDT logs) for the client to decrypt and index locally.
 
-There is no `search_index` table, no server FTS ([server 11 §11.3](https://github.com/Nyxite/server)).
+There is no `search_index` table, no server FTS ([server 11 §11.3](https://github.com/Nyxite/NyxiteServer)).
 
 ## 11.4 Web client index
 

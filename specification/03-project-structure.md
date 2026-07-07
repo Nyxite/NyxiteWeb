@@ -1,6 +1,6 @@
 # 03 — Project Structure
 
-The web client is a **single Next.js 15 package** (no Gradle-style multi-module split), so the compile-time module boundaries the Android client gets from Gradle ([android 03](https://github.com/Nyxite/android)) are reproduced here with **TypeScript path aliases + an ESLint boundary rule** ([01 §1.2](01-architecture.md)). The layering is identical: presentation → domain → data, with crypto and network isolated so plaintext can never reach a network client.
+The web client is a **single Next.js 15 package** (no Gradle-style multi-module split), so the compile-time module boundaries the Android client gets from Gradle ([android 03](https://github.com/Nyxite/NyxiteAndroid)) are reproduced here with **TypeScript path aliases + an ESLint boundary rule** ([01 §1.2](01-architecture.md)). The layering is identical: presentation → domain → data, with crypto and network isolated so plaintext can never reach a network client.
 
 ## 3.1 Folder layout
 
@@ -167,7 +167,7 @@ The critical rule is the last one: a network module that imports a crypto module
 | `theme_color` / `background_color` | Nyxite brand (dark-first, [15 §15.4](15-ui-and-navigation.md)) |
 | `icons` | `public/icons/**` (incl. maskable) |
 
-- **No native application id.** Unlike the Android client's `app.nyxite.android` application ID ([android 03 §3.2](https://github.com/Nyxite/android)), the web app has no OS package identity — its identity is **origin-scoped** (the manifest `id` resolved against the host serving the static bundle). Two instances on different hosts install as distinct PWAs; multi-account ([01 §1.8](01-architecture.md)) is handled inside a single installed app via per-account IndexedDB.
+- **No native application id.** Unlike the Android client's `app.nyxite.android` application ID ([android 03 §3.2](https://github.com/Nyxite/NyxiteAndroid)), the web app has no OS package identity — its identity is **origin-scoped** (the manifest `id` resolved against the host serving the static bundle). Two instances on different hosts install as distinct PWAs; multi-account ([01 §1.8](01-architecture.md)) is handled inside a single installed app via per-account IndexedDB.
 
 ## 3.7 Repository files
 

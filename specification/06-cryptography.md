@@ -1,6 +1,6 @@
 # 06 — Cryptography
 
-This is the most consequential module (`core-crypto`). It must be **bit-compatible with the server's framing and the other clients' implementations** — Yjs/web is the *reference* for the CRDT wire, but the **crypto must match server, desktop (ydotnet), and Android (Tink)** byte-for-byte: a frame sealed in one client must open in all the others. Everything here mirrors [server 07](https://github.com/Nyxite/server) and the sibling [android 06](https://github.com/Nyxite/android).
+This is the most consequential module (`core-crypto`). It must be **bit-compatible with the server's framing and the other clients' implementations** — Yjs/web is the *reference* for the CRDT wire, but the **crypto must match server, desktop (ydotnet), and Android (Tink)** byte-for-byte: a frame sealed in one client must open in all the others. Everything here mirrors [server 07](https://github.com/Nyxite/NyxiteServer) and the sibling [android 06](https://github.com/Nyxite/NyxiteAndroid).
 
 ## 6.1 Posture
 
@@ -21,7 +21,7 @@ All crypto is reached through one component, `CryptoEngine`, which fronts the wo
 | Plaintext hashing (content address) | **BLAKE3-256** | **hash-wasm** (`blake3`), streamed |
 | CSPRNG (FK + nonce) | OS CSPRNG | **`crypto.getRandomValues`** |
 
-These values are **pinned to the server's canonical ledger** ([server 07 §7.3](https://github.com/Nyxite/server)) and must be byte-identical across clients; the client tracks the server's `07` and **fails CI on any drift** via the shared conformance vectors ([18 §18.5](18-build-ci-testing.md)).
+These values are **pinned to the server's canonical ledger** ([server 07 §7.3](https://github.com/Nyxite/NyxiteServer)) and must be byte-identical across clients; the client tracks the server's `07` and **fails CI on any drift** via the shared conformance vectors ([18 §18.5](18-build-ci-testing.md)).
 
 **System rule — HPKE vs AES-256-GCM**: use **HPKE wherever the target is a public key** (file-key wrap to members, device/browser enrollment to a pubkey); use **AES-256-GCM wherever the key is symmetric** (all content + the recovery blob).
 
