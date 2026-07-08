@@ -46,6 +46,14 @@ Next.js + shadcn/ui client. Primary surface for anonymous guest access.
 
 - **Native login** — password + required TOTP, or **passkeys (WebAuthn)** — authenticates the account and returns the server's own token; decryption is governed by the in-browser key material. Enterprise Keycloak/OIDC SSO is a pluggable option. (See [SPECIFICATION §10](../docs/SPECIFICATION.md).)
 
+## Bug reporting & support
+
+- **"Report a bug"** — an in-app report composer, shown only when the instance has reporting enabled (a server `support.enabled` capability flag; v1 = the maintainer's official instance(s) — SUP-9).
+- **Screenshot capture + destructive redaction** — optionally attach a screenshot (a canvas render of the current view, or a display capture you grant); a redaction editor with **black-box + blur** tools **flattens redacted regions into the pixels before upload**, so the original image and mask never leave the browser (SUP-2).
+- **Consent + destination notice** — before sending, a clear notice that, unlike your files, the report is **not end-to-end encrypted** and goes to the **Nyxite maintainer**, plus a GDPR disclosure (SUP-1); a **user-reviewable diagnostic envelope** (app version/build, platform, locale, current screen id — never content, scrubbed logs, connection state) is editable before send.
+- **"My tickets"** — track your own reports' status and support replies with in-app notifications; submission goes through the server as an **authenticating relay** (the browser never contacts the helpdesk directly — SUP-3/SUP-7).
+- Runs on the **consensual, non-E2EE support plane** — disjoint from content, carrying no content key or content-plane ciphertext. Detailed in [Nyxite Support](support.md) / the `NyxiteSupport` repo `specification/`; decisions in [OPEN-DECISIONS.md](../docs/OPEN-DECISIONS.md) (SUP-1–SUP-9).
+
 ## Open questions
 
 See [../docs/OPEN-DECISIONS.md](../docs/OPEN-DECISIONS.md). Web-specific:

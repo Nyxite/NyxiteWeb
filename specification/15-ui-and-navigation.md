@@ -29,6 +29,8 @@ Every segment is a client component; there is no SSR of content and no server ru
 | | `app/(app)/settings/storage/page.tsx` | Usage, convenience cache, kept set ([16 §16.7](16-offline-and-pwa.md)) |
 | | `app/(app)/settings/accounts/page.tsx` | Add / switch / remove accounts, per-account instance host |
 | | `app/(app)/settings/about/page.tsx` | Version, licenses, build hash |
+| **Support** | `app/(app)/support/report/page.tsx` | **Report a bug** composer — present only when `support.enabled` (§15.10) |
+| | `app/(app)/support/tickets/page.tsx` | **My tickets** — own reports' status + replies (§15.10) |
 
 `(app)` is a route group requiring an unlocked account session ([01 §1.8](01-architecture.md)); a route guard redirects to `login`/`enroll`/unlock when no session exists. Auth and guest segments live **outside** `(app)` so they render without a session.
 
@@ -92,3 +94,15 @@ Dark-first via CSS variables (light/dark tokens), Nyxite "Nyx" night palette, Ny
 Every screen defines explicit **loading** (skeletons), **empty** (no projects/files/results), **error** (typed `NyxiteApiError`, [05](05-api-client.md)), **locked** (needs unlock/enrollment → unlock dialog), and **offline** (read/edit cached subset, banner) states — no silent blank screens.
 
 A dedicated **unsupported-browser screen** is shown at boot when a hard requirement is missing — **WebCrypto** (`crypto.subtle`), **IndexedDB**, **Service Worker / WebAssembly**, or a **secure context** ([00 §0.6](00-overview.md), [17](17-security.md)). It explains the requirement and lists supported browsers rather than degrading into an insecure path.
+
+## 15.10 Bug reporting & support
+
+In-app bug reporting routing to the maintainer-run `NyxiteSupport` helpdesk. This runs on the project's **one deliberate, consensual non-E2EE support plane**, disjoint from the content plane — see [17 §17.10](17-security.md), the master feature [support.md](https://github.com/Nyxite/Nyxite), the [NyxiteSupport `specification/02`](https://github.com/Nyxite/NyxiteSupport), and [OPEN-DECISIONS SUP-1–SUP-9](https://github.com/Nyxite/Nyxite).
+
+- **Capability-gated surface (SUP-9).** The **"Report a bug"** entry (in the sidebar / command palette / `about`) and the **"My tickets"** view render **only when the server advertises the `support.enabled` capability flag** (v1 = the maintainer's official instance(s) only). Where the flag is absent the surfaces are **simply absent** — no disabled control, no hint.
+- **Report composer.** Free-text **title + description** (`Dialog`/route + `react-hook-form`/`zod`), plus an optional screenshot and the diagnostic envelope below.
+- **Screenshot capture + destructive redaction (SUP-2).** Optional capture of the current view by **rendering it to a `<canvas>`** (or a user-granted `getDisplayMedia` display capture), opened in a redaction editor offering **black-box** and **blur** tools. Redaction is **destructive and client-side**: the redacted regions are **flattened into the pixels (re-encoded PNG) before upload**, EXIF/metadata stripped; the **original image and any redaction mask are never sent** — there is no peel-back layer. Redaction is manual (the user decides what to hide).
+- **Consent + destination notice before send (SUP-1).** Before a report can transmit, the user must confirm a clear notice that — **unlike their files — this report is *not* end-to-end encrypted and goes to the Nyxite maintainer**, shown alongside a GDPR disclosure. A report carries **no content key and no content-plane ciphertext**.
+- **User-reviewable, editable diagnostic envelope.** A non-content technical bundle shown for **review + edit** before send: app version/build, platform/browser, locale, the **current screen/route id** (a UI location, never a file/project name or any content), **scrubbed** client-side error logs / recent stack traces, and coarse connection/relay state. Nothing is attached that is not represented in this envelope.
+- **"My tickets" view (SUP-3).** An account user sees their own reports' status, the operator's **public replies**, and gets **in-app notifications** (`Toast`) of updates — a genuine two-way thread, not fire-and-forget. Guests (share/guest sessions) instead supply an email + optional name and receive replies via email + a tokenized no-login link (SUP-6).
+- **Submission via the server as an authenticating relay (SUP-7).** The client **never contacts the helpdesk directly**: it submits to its own `NyxiteServer`, which authenticates the submitter and relays to `NyxiteSupport` tagged with the instance fingerprint + an opaque user reference. Submission is best-effort and off the critical path; a transport failure surfaces a retryable error and never blocks the app.
