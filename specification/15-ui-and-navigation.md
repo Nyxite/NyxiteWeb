@@ -2,6 +2,8 @@
 
 React 19 + shadcn/ui (Radix primitives) + Tailwind CSS v4, **dark-first** with the Nyxite brand. Routing is the Next.js App Router rendered **fully client-side under static export** ([00 §0.5](00-overview.md), [02 §2.1](02-tech-stack-and-libraries.md)). The web client is responsive (phone → desktop) and is the **primary guest surface**; the ink editor is "view + basic editing", not the showcase ([10](10-editors.md)). This mirrors the Android client's navigation discipline ([android 15](https://github.com/Nyxite/NyxiteAndroid)).
 
+The UI implements the shared [NyxiteDesign](https://github.com/Nyxite/NyxiteDesign) system's **two-layer** adoption ([OPEN-DECISIONS DS](https://github.com/Nyxite/Nyxite/blob/main/docs/OPEN-DECISIONS.md), Live decision DS): **Layer A** = the generated design tokens ([02 §2.2](02-tech-stack-and-libraries.md)) + the standard shadcn/ui component set used everywhere; **Layer B** = the consumer app shell — the left **rail** (Document / Presentation / Spreadsheet), the **three toolbar densities** (classic / slim / minimal), and the editor **canvas** — shared with the other consumer clients.
+
 ## 15.1 Route map (App Router segments, all client-rendered)
 
 Every segment is a client component; there is no SSR of content and no server runtime ([01 §1.1](01-architecture.md)). The app shell (header, nav, providers, crypto worker, query client) is precached by the service worker ([16](16-offline-and-pwa.md)).
@@ -81,7 +83,9 @@ Because the app is **multi-account from v1.0.0** ([14 §14.7](14-authentication.
 
 ## 15.7 Theming & brand
 
-Dark-first via CSS variables (light/dark tokens), Nyxite "Nyx" night palette, Nyxite icon/brand assets ([03](03-project-structure.md)). Typography is legible for long-form reading and code and respects the browser/system font-scaling (rem-based, no fixed px on text). Tailwind v4 tokens drive both shadcn and bespoke components.
+Dark-first via CSS variables (light/dark tokens), Nyxite "Nyx" night palette, Nyxite icon/brand assets ([03](03-project-structure.md)). The light/dark semantic themes, deep-purple accent, spacing, radius, shadow, and motion all come from the shared [NyxiteDesign](https://github.com/Nyxite/NyxiteDesign) tokens — the generated CSS vars and Tailwind theme ([02 §2.2](02-tech-stack-and-libraries.md)), not hand-picked here. Typography is **Manrope** (UI) and **Source Serif 4** (document content); it is legible for long-form reading and code and respects the browser/system font-scaling (rem-based, no fixed px on text). Tailwind v4 tokens drive both shadcn and bespoke components.
+
+**Fonts are self-hosted, never CDN-fetched.** Manrope and Source Serif 4 — and every brand asset — are **bundled and served same-origin** ([03 §3.1](03-project-structure.md)); the app **never** fetches fonts from Google Fonts or any external CDN at runtime. A runtime font fetch would leak the user's IP and request timing to a third party (and pull in Google), which is incompatible with the zero-knowledge stance — the CSP forbids it ([17](17-security.md)).
 
 ## 15.8 Accessibility & input
 

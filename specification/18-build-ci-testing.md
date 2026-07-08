@@ -6,6 +6,7 @@ The web client ships as a **static bundle** with **no server runtime** ([00 §0.
 
 - **pnpm** workspace; **Node 20+ build-time only** (nothing runs server-side in prod — [02 §2.1](02-tech-stack-and-libraries.md)). Lockfile committed; CI runs `pnpm install --frozen-lockfile`.
 - **Next.js 15 App Router** with **`output: 'export'`** → a static `out/` of HTML/JS/CSS/WASM. SSR, route handlers, middleware, and image optimization are disabled by config — a build that introduces a server-only API must **fail** ([02 §2.1](02-tech-stack-and-libraries.md)).
+- **Design-token build pipeline (DS-3).** Before the app build, a generation step turns the shared [NyxiteDesign](https://github.com/Nyxite/NyxiteDesign) `nyxite-tokens.json` (the platform-agnostic single source of truth) into the web artifacts — the CSS custom properties (`:root` + `[data-theme="dark"]`) and the Tailwind theme extension consumed as `var(--accent)` etc. ([02 §2.2](02-tech-stack-and-libraries.md), [03 §3.1](03-project-structure.md)). The generated files are **build outputs, never hand-edited**; CI **re-runs the generator and fails on any drift** between the checked-in artifact and a fresh generation, so the client can never diverge from the shared tokens ([OPEN-DECISIONS DS](https://github.com/Nyxite/Nyxite/blob/main/docs/OPEN-DECISIONS.md), Live decision DS).
 - **TypeScript `strict`**; `tsc --noEmit` is a build-blocking step, not advisory.
 - Asset hashing: all JS/CSS/WASM emitted with **content-hashed filenames** (cache-busting) so the CDN can serve them `immutable` and the service worker can precache by revision ([§18.2](#182-distribution--deployment)).
 - **WASM bundling**: `hash-wasm` (BLAKE3, Argon2id), `libsodium-wrappers-sumo`, the `hpke-js` build, the **WASM PQC library** (ML-KEM-768 / ML-DSA-65), and the CBOR codec ship as **self-hosted, content-hashed `.wasm`/JS assets** — never fetched from a third-party CDN (CSP forbids it, [17](17-security.md)). WASM is loaded inside the **crypto Web Worker** ([01 §1.6](01-architecture.md)); verify the bundler emits worker chunks + their WASM as same-origin assets.
@@ -109,19 +110,20 @@ For each **server-owned PINNED value** ([19 §19.6](19-open-questions.md)) there
 
 **On PR** (fast, blocking):
 1. `pnpm install --frozen-lockfile`
-2. `tsc --noEmit` (strict)
-3. ESLint (incl. `eslint-plugin-boundaries` crypto/layer test) + Prettier check
-4. Vitest **unit** (domain, data with fake server, stores)
-5. **Crypto conformance** KATs/cross-client vectors (real WebCrypto + WASM)
-6. **CRDT conformance** vectors
-7. React Testing Library **component** tests
-8. **Build + static export** + **bundle-size** check
-9. **Dependency audit** (`pnpm audit`) + **supply-chain scan** (e.g. OSV/Socket) — no remote-code or phone-home deps ([02 §2.12](02-tech-stack-and-libraries.md))
+2. **Token generation + drift check** — regenerate the CSS vars / Tailwind theme from NyxiteDesign `nyxite-tokens.json`; fail if the checked-in artifact differs (DS-3, [§18.1](#181-build-setup))
+3. `tsc --noEmit` (strict)
+4. ESLint (incl. `eslint-plugin-boundaries` crypto/layer test) + Prettier check
+5. Vitest **unit** (domain, data with fake server, stores)
+6. **Crypto conformance** KATs/cross-client vectors (real WebCrypto + WASM)
+7. **CRDT conformance** vectors
+8. React Testing Library **component** tests
+9. **Build + static export** + **bundle-size** check
+10. **Dependency audit** (`pnpm audit`) + **supply-chain scan** (e.g. OSV/Socket) — no remote-code or phone-home deps ([02 §2.12](02-tech-stack-and-libraries.md))
 
 **On main / tags** (extended):
-10. **Playwright e2e** against the test server ([§18.5](#185-end-to-end-flows-playwright)) — incl. guest, offline/PWA, multi-tab
-11. **Lighthouse / PWA** audit (installability, offline, performance, a11y budgets — [15](15-ui-and-navigation.md), [16](16-offline-and-pwa.md))
-12. Publish immutable assets via NyxiteDeploy ([§18.2](#182-distribution--deployment))
+11. **Playwright e2e** against the test server ([§18.5](#185-end-to-end-flows-playwright)) — incl. guest, offline/PWA, multi-tab
+12. **Lighthouse / PWA** audit (installability, offline, performance, a11y budgets — [15](15-ui-and-navigation.md), [16](16-offline-and-pwa.md))
+13. Publish immutable assets via NyxiteDeploy ([§18.2](#182-distribution--deployment))
 
 **Fail fast on any conformance regression** — crypto or CRDT drift blocks merge unconditionally.
 

@@ -25,6 +25,8 @@ Concrete choices with rationale. Versions are **[P]** floors at time of writing;
 | Markdown render (view mode) | **react-markdown** + **remark-gfm** + **rehype-sanitize** | GFM tables/task-lists; **sanitized**, **no remote fetch** from content (privacy/XSS) ([10 §10.2](10-editors.md), [17](17-security.md)). |
 | Text editor (edit mode) | **CodeMirror 6** + **y-codemirror.next** | Collaborative text editing bound directly to the Yjs doc, with remote cursors; works for markdown and plaintext (and `sourcecode` later). |
 
+> **Design tokens are shared, not hand-defined here.** Colors (deep-purple accent), typography (Manrope UI / Source Serif 4 content), spacing, radius, shadow, and motion are **not** authored in this repo — they come from the shared [NyxiteDesign](https://github.com/Nyxite/NyxiteDesign) system, whose `nyxite-tokens.json` is the platform-agnostic single source of truth. The Tailwind v4 theme extension and the CSS custom properties (`:root` + `[data-theme="dark"]`, consumed as `var(--accent)` etc.) are **generated** from that file by the token build pipeline so the client never drifts ([03 §3.1](03-project-structure.md), [18 §18.1](18-build-ci-testing.md)). shadcn/ui supplies the standard components — this is **Layer A** (tokens + standard components) of the design system's two-layer adoption. See [OPEN-DECISIONS DS](https://github.com/Nyxite/Nyxite/blob/main/docs/OPEN-DECISIONS.md) (Live decision DS).
+
 ## 2.3 State, data fetching, routing
 
 | Concern | Choice | Rationale |

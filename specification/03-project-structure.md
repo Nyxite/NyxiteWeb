@@ -10,7 +10,7 @@ NyxiteWeb/
 ├── pnpm-lock.yaml
 ├── next.config.ts                     # output:'export', strict, headers for dev only (CSP is host-served, [17])
 ├── tsconfig.json                      # strict; path aliases (§3.3)
-├── tailwind.config.ts · postcss.config.mjs
+├── tailwind.config.ts · postcss.config.mjs   # theme extension consumes the GENERATED tokens (§3.1, [02 §2.2])
 ├── eslint.config.mjs                  # eslint-plugin-boundaries layer rules (§3.5)
 ├── vitest.config.ts · playwright.config.ts
 ├── components.json                    # shadcn/ui config (copied-in components)
@@ -18,7 +18,8 @@ NyxiteWeb/
 ├── app/                               # App Router — ALL segments client-rendered (static export)
 │   ├── layout.tsx                     # root shell: providers (Query, theme, account session), <html>
 │   ├── page.tsx                       # redirect → /app or /login
-│   ├── globals.css                    # Tailwind layer + brand CSS variables
+│   ├── globals.css                    # Tailwind layer; @imports the generated token CSS below
+│   ├── tokens.generated.css           # BUILD OUTPUT — :root + [data-theme="dark"] CSS vars generated from NyxiteDesign nyxite-tokens.json; DO NOT hand-edit ([02 §2.2], [18 §18.1])
 │   ├── login/page.tsx                 # native login (password+TOTP + passkey) ([14])
 │   ├── auth/callback/page.tsx         # enterprise Keycloak OIDC redirect handler (PKCE) ([14])
 │   ├── app/                           # authenticated area (account session required)
@@ -78,8 +79,11 @@ NyxiteWeb/
     ├── config.json                    # runtime instance config (API base, relay, share base; OIDC authority for enterprise Keycloak)
     ├── manifest.webmanifest           # PWA identity (§3.4)
     ├── icons/                         # from Nyxite/icons set; install/maskable icons
+    ├── fonts/                         # SELF-HOSTED Manrope + Source Serif 4 (bundled, never a Google Fonts/CDN fetch — [15 §15.7])
     └── *.wasm                         # blake3, argon2id, libsodium WASM artifacts
 ```
+
+`app/tokens.generated.css` is a **build output**, not a source file: the token build pipeline regenerates it from the shared [NyxiteDesign](https://github.com/Nyxite/NyxiteDesign) `nyxite-tokens.json` and CI fails on drift ([02 §2.2](02-tech-stack-and-libraries.md), [18 §18.1](18-build-ci-testing.md), [OPEN-DECISIONS DS](https://github.com/Nyxite/Nyxite/blob/main/docs/OPEN-DECISIONS.md)).
 
 `app/` holds only thin route segments (each `'use client'`); all real logic lives under `src/`. The presentation layer (`app/`, `features/`) imports from `domain/` only; `data/` is reached through dependency injection at the composition root in `app/layout.tsx` (a small provider that constructs the account-scoped repositories — [01 §1.8](01-architecture.md)).
 
