@@ -87,7 +87,7 @@ interface CreateShareRequest {
   expiresAt?: string;
 }
 
-interface PublicKeyDto { keyId: string; x25519: Uint8Array; ed25519: Uint8Array; generation: number; }
+interface PublicKeyDto { keyId: string; hpkePub: Uint8Array; sigPub: Uint8Array; generation: number; } // hpkePub = hybrid X25519 ‖ ML-KEM-768; sigPub = hybrid Ed25519 ‖ ML-DSA-65 (concatenated halves, §06)
 
 interface RecoveryBlobDto { version: number; kdf: KdfParams; nonce: Uint8Array; ciphertext: Uint8Array; tag: Uint8Array; }
 interface KdfParams { alg: 'argon2id'; m: number; t: number; p: number; salt: Uint8Array; }

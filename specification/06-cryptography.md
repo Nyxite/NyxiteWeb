@@ -55,13 +55,13 @@ interface CryptoEngine {
   seal(plaintext: Uint8Array, fk: FileKeyHandle, kind: ObjectKind, fileId: Uuid): Promise<Uint8Array>; // → frame
   open(frame: Uint8Array,  fk: FileKeyHandle, kind: ObjectKind, fileId: Uuid): Promise<Uint8Array>;     // → plaintext
 
-  // HPKE (target is a PUBLIC KEY)
-  wrapToPublicKey(payload: Uint8Array, recipientX25519Pub: Uint8Array): Promise<Uint8Array>; // → enc‖ct‖tag
+  // HPKE (target is a PUBLIC KEY — hybrid X25519 ‖ ML-KEM-768)
+  wrapToPublicKey(payload: Uint8Array, recipientHpkePub: Uint8Array): Promise<Uint8Array>; // → enc‖ct‖tag
   unwrapWithIdentity(wrapped: Uint8Array, identity: IdentityPrivateKeys): Promise<Uint8Array>;
 
-  // Ed25519
-  sign(message: Uint8Array, ed25519Priv: Uint8Array): Promise<Uint8Array>;   // 64-byte detached sig
-  verify(message: Uint8Array, sig: Uint8Array, ed25519Pub: Uint8Array): Promise<boolean>;
+  // Signatures (hybrid Ed25519 + ML-DSA-65)
+  sign(message: Uint8Array, sigPriv: Uint8Array): Promise<Uint8Array>;   // hybrid dual detached sig (Ed25519 ‖ ML-DSA-65)
+  verify(message: Uint8Array, sig: Uint8Array, sigPub: Uint8Array): Promise<boolean>; // both halves must verify
 
   // Content addressing
   contentAddress(plaintext: Uint8Array): Promise<Uint8Array>; // BLAKE3-256, 32 bytes
@@ -80,7 +80,7 @@ interface CryptoEngine {
 
 ## 6.5 HPKE wrapping (account shares, recovery transport, enrollment)
 
-- To **share a file to a user** (account share), wrap the FK to the owner, or **enroll a new browser**, the client fetches the recipient's **X25519 public key** from the directory ([13](13-sharing.md), [07 §7.4](07-key-and-device-management.md)) and HPKE-seals the payload to it. The result is the `wrapped_key` / `wrappedIdentityKey` blob stored server-side; only the recipient can open it with its identity private key.
+- To **share a file to a user** (account share), wrap the FK to the owner, or **enroll a new browser**, the client fetches the recipient's **hybrid HPKE public key** (X25519 + ML-KEM-768) from the directory ([13](13-sharing.md), [07 §7.4](07-key-and-device-management.md)) and HPKE-seals the payload to it. The result is the `wrapped_key` / `wrappedIdentityKey` blob stored server-side; only the recipient can open it with its identity private key.
 - **HPKE wrap output framing**: `enc(hybrid encapsulated key) ‖ ciphertext ‖ tag(16)` — matches the server (the `enc` now carries the concatenated X25519 + ML-KEM-768 encapsulation, so its length grows by the ML-KEM-768 ciphertext).
 - At v1.0.0 the HPKE KEM is the **hybrid `X25519MLKEM768`** — the classical `DhkemX25519HkdfSha256` below **concatenated** with **ML-KEM-768** — with `HkdfSha256` / `Aes256Gcm` unchanged (NIST level 3). The **classical half must equal** the server's suite:
 
@@ -186,7 +186,7 @@ personal key  →  wraps  →  group key  →  wraps  →  DEK (FK)  →  encryp
 - **No new primitive.** A group public key is **just another (hybrid) HPKE target**, exactly like a member or browser-enrollment public key — the same suite the rest of §6 pins. No new algorithm and no group-special WASM module: the group crypto reuses the same worker-hosted stack — **hpke-js** (`@hpke/core` + `@hpke/dhkem-x25519`) plus the **WASM PQC library** for the ML-KEM-768/ML-DSA-65 halves ([§6.13](#613-browser-specific-notes-webcrypto-availability--library-choice-p)) for the wrap, and **libsodium-wrappers-sumo** (+ the same PQC lib) for the group signing keypair — that [§6.2](#62-algorithm-table-must-match-server-exactly) already pins for every wrap ([§6.11](#611-the-crypto-worker)). All group wrap/unwrap runs **in the worker**, never on the main thread and never in any Next.js server runtime.
 - **Group keypair.** `X25519 + ML-KEM-768` (hybrid HPKE recipient) + `Ed25519 + ML-DSA-65` (hybrid signature over the group's directory entry / grants), generated in the worker at group creation. The **public** halves are published; the **private** halves are stored **only wrapped**, once per member.
 
-**Group-key grant blob (`group_privkey` HPKE-wrapped to a member).** The group private key is HPKE-sealed to a member's **X25519 public key** using **exactly** the §6.5 suite and `enc ‖ ct ‖ tag` framing; the grant record wraps that ciphertext with routing/agility metadata (pinned in **P4.4-CORE-1**):
+**Group-key grant blob (`group_privkey` HPKE-wrapped to a member).** The group private key is HPKE-sealed to a member's **hybrid HPKE public key** (X25519 + ML-KEM-768) using **exactly** the §6.5 suite and `enc ‖ ct ‖ tag` framing; the grant record wraps that ciphertext with routing/agility metadata (pinned in **P4.4-CORE-1**):
 
 ```
 group_id(16) | scope_id(16) | member_id(16) | generation(4) | alg_id(2) | hpke_ct( enc(32) ‖ ct ‖ tag(16) )
@@ -198,7 +198,7 @@ group_id(16) | scope_id(16) | member_id(16) | generation(4) | alg_id(2) | hpke_c
 **DEK-to-group wrap.** To let a group read a file, the client HPKE-wraps that file's **FK** to the **group public key** (fetched from the directory, verified per [§6.10](#610-signing--verifying)) and stores one wrapped-key row whose **principal is a group** (per scope/generation), alongside the existing per-member wraps ([13 §13.9](13-sharing.md)). Same `enc ‖ ct ‖ tag` output; same `alg_id` tag.
 
 **Unwrap chain (read path).** A member's browser:
-1. HPKE-**unwraps the group private key** from its grant using the **identity X25519 private key** (`unwrapWithIdentity`) — the group privkey surfaces as raw bytes held **in the worker only**, `.fill(0)` on drop ([§6.12](#612-implementation-rules)).
+1. HPKE-**unwraps the group private key** from its grant using the **identity HPKE private key** (hybrid X25519 + ML-KEM-768) (`unwrapWithIdentity`) — the group privkey surfaces as raw bytes held **in the worker only**, `.fill(0)` on drop ([§6.12](#612-implementation-rules)).
 2. HPKE-**unwraps the file DEK** from the DEK-to-group row using that group private key → a non-extractable `FileKeyHandle` ([§6.7](#67-filekeyhandle)).
 3. `open`s content as usual (§6.3). The group privkey is never persisted unwrapped and never leaves the worker.
 
@@ -206,16 +206,16 @@ group_id(16) | scope_id(16) | member_id(16) | generation(4) | alg_id(2) | hpke_c
 
 ```ts
 // Group keygen (hybrid: libsodium X25519/Ed25519 + WASM PQC ML-KEM-768/ML-DSA-65, in the worker)
-generateGroupKeypair(): Promise<GroupKeyMaterial>; // {x25519Pub, ed25519Pub} out; private halves stay in-worker
+generateGroupKeypair(): Promise<GroupKeyMaterial>; // {hpkePub, sigPub} out (hybrid X25519‖ML-KEM-768 / Ed25519‖ML-DSA-65); private halves stay in-worker
 
-// Wrap the group PRIVATE key to a member (HPKE, target = member X25519 pub) → grant hpke_ct
-wrapGroupKeyToMember(groupPriv: GroupPrivHandle, memberX25519Pub: Uint8Array): Promise<Uint8Array>;
+// Wrap the group PRIVATE key to a member (HPKE, target = member hybrid HPKE pub) → grant hpke_ct
+wrapGroupKeyToMember(groupPriv: GroupPrivHandle, memberHpkePub: Uint8Array): Promise<Uint8Array>;
 
 // Unwrap the group private key from a grant with the caller's identity (HPKE)
 unwrapGroupKey(grantHpkeCt: Uint8Array, identity: IdentityPrivateKeys): Promise<GroupPrivHandle>;
 
-// Wrap a file DEK to a group PUBLIC key (HPKE, target = group X25519 pub)
-wrapDekToGroup(fk: FileKeyHandle, groupX25519Pub: Uint8Array): Promise<Uint8Array>;
+// Wrap a file DEK to a group PUBLIC key (HPKE, target = group hybrid HPKE pub)
+wrapDekToGroup(fk: FileKeyHandle, groupHpkePub: Uint8Array): Promise<Uint8Array>;
 
 // Unwrap a DEK-to-group row with an already-unwrapped group private key (HPKE) → FileKeyHandle
 unwrapDekWithGroup(wrapped: Uint8Array, groupPriv: GroupPrivHandle): Promise<FileKeyHandle>;

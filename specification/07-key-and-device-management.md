@@ -130,7 +130,7 @@ Adding a member — from a browser that already holds the group key:
 
 1. Fetch the newcomer's directory entry (`GET /keys/directory?userId=`).
 2. **Verify the entry against the key-transparency log (Phase 4.3 inclusion proof)** — a directory-substituted key is **rejected before any wrap** (harder gate than the account-share self-signature check).
-3. HPKE-**wrap the group private key** under the verified X25519 public key (`wrapGroupKeyToMember`, [06 §6.14](06-cryptography.md)).
+3. HPKE-**wrap the group private key** under the verified hybrid HPKE public key (X25519 + ML-KEM-768) (`wrapGroupKeyToMember`, [06 §6.14](06-cryptography.md)).
 4. `POST /groups/{id}/members` carrying **one** grant blob. No file is touched — the single grant instantly grants every file the group can read (**O(1)**, versus the account-share path's O(files) per member).
 
 Over the **server-enforced group-size limit** ([features/groups.md](https://github.com/Nyxite/Nyxite)) the enroll `POST` is rejected (membership-row count only; no key/content read) and audited; existence-hiding applies (no reach → `404`).

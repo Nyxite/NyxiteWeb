@@ -60,7 +60,7 @@ Core shadcn components: `Sidebar`, `Resizable`, `Dialog`/`Drawer`/`Sheet`, `Comm
 
 | Screen | Contents |
 |--------|----------|
-| **Projects / Folder list** | Decrypted names, folders + files, content-type icons (markdown/text/ink via lucide), **per-item sync + cache badges** ([08](08-sync-engine.md)), create/move/rename/delete (`Dialog` + `react-hook-form`/`zod`), **keep-in-browser toggle at file/folder/project (cascading)** ([16 §16.3](16-offline-and-pwa.md)), exclude-from-sync, inline search box, pull/refresh → delta sync. |
+| **Projects / Folder list** | Decrypted names, folders + files, content-type icons (markdown/text/ink via Phosphor), **per-item sync + cache badges** ([08](08-sync-engine.md)), create/move/rename/delete (`Dialog` + `react-hook-form`/`zod`), **keep-in-browser toggle at file/folder/project (cascading)** ([16 §16.3](16-offline-and-pwa.md)), exclude-from-sync, inline search box, pull/refresh → delta sync. |
 | **Text editor** | View ⇄ edit toggle; CodeMirror 6 bound to the Yjs doc with remote carets + presence chips ([09](09-realtime-collaboration.md)); markdown rendered via react-markdown + **rehype-sanitize** ([10 §10.2](10-editors.md)); relay connection state; history/share/snapshot actions. |
 | **Ink editor** | Pointer-Events `<canvas>` (optionally `desynchronized`), tool palette (pen/highlighter/eraser, color, width), pages, undo/redo, zoom/pan, palm rejection; trimmed feature set vs. native ([10 §10.4](10-editors.md)). |
 | **Version history** | Timeline with author + timestamp, fetch+view a version, diff two versions (worker-computed), restore ([12](12-version-history.md)). |
@@ -101,7 +101,7 @@ A dedicated **unsupported-browser screen** is shown at boot when a hard requirem
 
 ## 15.10 Bug reporting & support
 
-In-app bug reporting routing to the maintainer-run `NyxiteSupport` helpdesk. This runs on the project's **one deliberate, consensual non-E2EE support plane**, disjoint from the content plane — see [17 §17.10](17-security.md), the master feature [support.md](https://github.com/Nyxite/Nyxite), the [NyxiteSupport `specification/02`](https://github.com/Nyxite/NyxiteSupport), and [OPEN-DECISIONS SUP-1–SUP-9](https://github.com/Nyxite/Nyxite).
+In-app bug reporting routing to the maintainer-run `NyxiteSupport` helpdesk. This runs on the project's **one deliberate, consensual non-E2EE support plane**, disjoint from the content plane — see [17 §17.10](17-security.md), the master feature [support.md](https://github.com/Nyxite/Nyxite), the [NyxiteSupport `specification/02`](https://github.com/Nyxite/NyxiteSupport), and [OPEN-DECISIONS SUP-1–SUP-13](https://github.com/Nyxite/Nyxite).
 
 - **Capability-gated surface (SUP-9).** The **"Report a bug"** entry (in the sidebar / command palette / `about`) and the **"My tickets"** view render **only when the server advertises the `support.enabled` capability flag** (v1 = the maintainer's official instance(s) only). Where the flag is absent the surfaces are **simply absent** — no disabled control, no hint.
 - **Report composer.** Free-text **title + description** (`Dialog`/route + `react-hook-form`/`zod`), plus an optional screenshot and the diagnostic envelope below.

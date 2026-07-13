@@ -20,7 +20,7 @@ Concrete choices with rationale. Versions are **[P]** floors at time of writing;
 |---------|--------|-----------|
 | Component system | **shadcn/ui** (Radix UI primitives, copied-in components) | Accessible, unstyled-by-default primitives we own in-repo; no opaque component CDN. |
 | CSS | **Tailwind CSS v4** | Utility styling shadcn is built on; tree-shaken. |
-| Icons | **lucide-react** | Matches shadcn. |
+| Icons | **Phosphor** (`@phosphor-icons/react`) | Canonical Nyxite icon set (`NyxiteDesign`); self-hosted/bundled, never a CDN. |
 | Theming | CSS variables (light/dark, Nyxite brand); **dark-first** | Notes app, night use, "Nyx" branding ([15 §15.4](15-ui-and-navigation.md)). |
 | Markdown render (view mode) | **react-markdown** + **remark-gfm** + **rehype-sanitize** | GFM tables/task-lists; **sanitized**, **no remote fetch** from content (privacy/XSS) ([10 §10.2](10-editors.md), [17](17-security.md)). |
 | Text editor (edit mode) | **CodeMirror 6** + **y-codemirror.next** | Collaborative text editing bound directly to the Yjs doc, with remote cursors; works for markdown and plaintext (and `sourcecode` later). |

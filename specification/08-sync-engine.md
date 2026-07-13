@@ -79,7 +79,7 @@ The opaque `nextCursor` (base64url, monotonic, tied to the server change-log seq
 
 ## 8.6 Deletes
 
-Soft-delete via `deletedAt`, propagated through manifest/delta; all peers converge. `excluded` files never reached the server, so deleting them is local-only. Hard delete/purge is admin-only and not initiated from the normal client.
+Soft-delete via `deletedAt`, propagated through manifest/delta; all peers converge. A delete runs the staged **Trash → grace → purge** lifecycle (DL-1–DL-5, [server 03 §3.3](https://github.com/Nyxite/NyxiteServer)): while inside the **Trash** window (default 30 d) the item is hidden from normal views but shown in a **Trash view** with **one-click restore** (clears `deletedAt`); once it leaves Trash it enters the server-side **grace** window and disappears from the client UI, restorable **only by an admin**; **purge** (~60 d total) is irreversible. The client offers **no permanent-delete-now / empty-trash-now** action (DL-5). Scope (DL-3): deleting a **share you received** removes only your own reference (like Drive "Remove"); an **owner's** delete runs the timeline globally. `excluded` files never reached the server, so deleting them is local-only. Hard delete/purge is admin-only and not initiated from the normal client.
 
 ## 8.7 On-demand download & caching
 

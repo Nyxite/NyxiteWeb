@@ -151,7 +151,7 @@ interface DeviceRow { id: string; label?: string; pubkey: Uint8Array; enrolledAt
 ```ts
 interface UserKeyRow {
   userId: string; email?: string; keyId: string;
-  x25519: Uint8Array; ed25519: Uint8Array; generation: number;
+  hpkePub: Uint8Array; sigPub: Uint8Array; generation: number;   // hybrid X25519 ‖ ML-KEM-768 / Ed25519 ‖ ML-DSA-65 ([06])
   fetchedAt: string;                   // refresh-on-use for directory entries ([13])
 }
 ```
@@ -196,7 +196,7 @@ Secret material is **never persisted in plaintext**; it lives only in an account
 ```ts
 interface UserSession {
   accountId: string; host: string;                 // instance base host
-  identity: { x25519: CryptoKey; ed25519: CryptoKey };  // non-extractable handles ([07])
+  identity: IdentityPrivateKeys;  // hybrid privs X25519 ‖ ML-KEM-768 ‖ Ed25519 ‖ ML-DSA-65, raw bytes in-memory for libsodium/WASM-PQC ([06],[07])
   fkHandles: Map<string /*keyId*/, CryptoKey>;     // unwrapped file keys, non-extractable, in-memory only
   tokens: { accessExp: number; /* bytes held by AuthManager, not here */ };
   guestFragmentKey?: CryptoKey;                     // link/guest: held in memory only, captured from location.hash ([13],[17])
